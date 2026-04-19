@@ -1,24 +1,27 @@
-"""
-Seguridad — JWT con soporte multi-rol y bcrypt.
-"""
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
-
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
 # ── Password ────────────────────────────────────────────────────
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    """Hashea una contraseña usando bcrypt."""
+    # bcrypt requiere bytes
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    """Verifica una contraseña plana contra su hash de bcrypt."""
+    try:
+        return bcrypt.checkpw(
+            plain.encode('utf-8'),
+            hashed.encode('utf-8')
+        )
+    except Exception:
+        return False
 
 
 # ── JWT ─────────────────────────────────────────────────────────
