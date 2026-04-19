@@ -1,0 +1,46 @@
+# =============================================================
+#  AAA_SERV_MECA — Requirements (FastAPI + PostGIS + IA + QR)
+# =============================================================
+
+# --- Core ---
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+
+# --- ORM / DB ---
+sqlalchemy>=2.0.30
+alembic>=1.13.1
+geoalchemy2>=0.14.3           # Soporte tipos GEOGRAPHY/GEOMETRY PostGIS
+asyncpg>=0.29.0               # Driver async para PostgreSQL
+psycopg2-binary>=2.9.9        # Driver sync para Alembic (env.py offline)
+
+# --- Validación & Configuración ---
+pydantic>=2.7.1
+pydantic-settings>=2.2.1
+python-dotenv>=1.0.1
+
+# --- Seguridad ---
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.9
+
+# --- Geolocalización ---
+shapely>=2.0.4                # Manipulación de geometrías
+geopy>=2.4.1                  # Geocodificación / distancias
+
+# --- Imágenes & IA ---
+pillow>=10.3.0                # Procesamiento de imágenes
+httpx>=0.27.0                 # HTTP async (llamadas a API de IA externa)
+boto3>=1.34.0                 # AWS S3 para almacenamiento de imágenes
+
+# --- Pagos QR ---
+qrcode[pil]>=7.4.2            # Generación de QR
+
+# --- Rate Limiting & Middlewares ---
+slowapi>=0.1.9
+
+# --- Logging ---
+loguru>=0.7.2
+
+# --- Utils ---
+email-validator>=2.1.1
+python-slugify>=8.0.4
