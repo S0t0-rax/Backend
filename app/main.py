@@ -86,47 +86,76 @@ async def run_migrations():
         logger.error(f"❌ Error al ejecutar migraciones: {e}")
 
 async def seed_data():
-    """Crea roles iniciales y usuario admin si no existen."""
+    """Crea roles iniciales, usuario admin y rescata usuarios viejos."""
     from app.db.session import AsyncSessionLocal
     from app.models.role import Role
     from app.models.user import User
     from app.core.security import hash_password
     from sqlalchemy import select
+    import bcrypt
     
-    logger.info("🌱 Verificando datos iniciales...")
+    def is_bcrypt_hash(h: str) -> bool:
+        return h.startswith("$2") and len(h) == 60
+
+    logger.info("🌱 Verificando datos iniciales y rescate de usuarios...")
     async with AsyncSessionLocal() as db:
         try:
             # 1. Crear roles básicos
             role_names = ["admin", "workshop_owner", "mechanic", "client"]
+            roles_map = {}
             for rname in role_names:
                 result = await db.execute(select(Role).where(Role.name == rname))
-                if not result.scalar_one_or_none():
-                    db.add(Role(name=rname, description=f"Rol de {rname}"))
+                role = result.scalar_one_or_none()
+                if not role:
+                    role = Role(name=rname, description=f"Rol de {rname}")
+                    db.add(role)
+                    await db.flush()
+                roles_map[rname] = role
             
             await db.commit()
             
-            # 2. Crear admin inicial desde .env
+            # 2. Rescatar usuarios existentes (encriptar si es necesario y asignar roles)
+            result = await db.execute(select(User))
+            users = result.scalars().all()
+            migrated = 0
+            for user in users:
+                needs_update = False
+                # Encriptar si es texto plano
+                if not is_bcrypt_hash(user.password_hash):
+                    user.password_hash = hash_password(user.password_hash)
+                    needs_update = True
+                
+                # Asignar rol admin (o client) si no tiene
+                if not user.roles:
+                    # Por seguridad, si es el primer rescate, les damos 'admin' 
+                    # para que el usuario pueda entrar. Luego puede bajarlos de rango.
+                    user.roles.append(roles_map["admin"])
+                    needs_update = True
+                
+                if needs_update:
+                    migrated += 1
+            
+            if migrated > 0:
+                await db.commit()
+                logger.info(f"✅ Se rescataron {migrated} usuarios con éxito.")
+
+            # 3. Crear admin desde .env solo si no hay ningún admin todavía
             result = await db.execute(select(User).where(User.email == settings.FIRST_ADMIN_EMAIL))
             if not result.scalar_one_or_none():
                 logger.info(f"👤 Creando usuario admin inicial: {settings.FIRST_ADMIN_EMAIL}")
-                admin_role_result = await db.execute(select(Role).where(Role.name == "admin"))
-                admin_role = admin_role_result.scalar_one()
-                
                 new_admin = User(
                     email=settings.FIRST_ADMIN_EMAIL,
                     password_hash=hash_password(settings.FIRST_ADMIN_PASSWORD),
                     full_name="Administrador Sistema",
                     is_active=True,
-                    roles=[admin_role]
+                    roles=[roles_map["admin"]]
                 )
                 db.add(new_admin)
                 await db.commit()
                 logger.info("✨ Admin creado con éxito.")
-            else:
-                logger.debug("Admin ya existe.")
 
         except Exception as e:
-            logger.error(f"❌ Error al sembrar datos: {e}")
+            logger.error(f"❌ Error al sembrar/rescatar datos: {e}")
             await db.rollback()
 
 @asynccontextmanager
@@ -134,7 +163,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"🚀 Iniciando {settings.APP_NAME} v{settings.APP_VERSION}")
     # Ejecutar migraciones antes de que la app acepte tráfico
     await run_migrations()
-    # Sembrar datos iniciales (Roles y Admin)
+    # Sembrar datos y rescatar usuarios
     await seed_data()
     yield
     logger.info("🛑 Servidor detenido.")
