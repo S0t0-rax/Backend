@@ -12,6 +12,7 @@ alembic>=1.13.1
 geoalchemy2>=0.14.3           # Soporte tipos GEOGRAPHY/GEOMETRY PostGIS
 asyncpg>=0.29.0               # Driver async para PostgreSQL
 psycopg2-binary>=2.9.9        # Driver sync para Alembic (env.py offline)
+psycopg[binary]>=3.2.1        # Driver sync para consultas directas (Psycopg 3)
 
 # --- Validación & Configuración ---
 pydantic>=2.7.1

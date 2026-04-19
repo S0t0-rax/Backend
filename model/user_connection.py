@@ -1,14 +1,29 @@
 import psycopg as pg
+import os
 
 class UserConecction():
     conn = None
 
     def __init__(self): ##constructor
         try:
-            self.conn = pg.connect("dbname=Servi_meca user=postgres password=fabicra4004M host=localhost port=5432");
+            # Prefer DATABASE_URL from environment (production/Railway)
+            # Otherwise use local development string
+            db_url = os.getenv("DATABASE_URL")
+            
+            if not db_url:
+                db_url = "dbname=Servi_meca user=postgres password=fabicra4004M host=localhost port=5432"
+            
+            # Psycopg 3 needs postgresql:// protocol, but some env vars might have sqlalchemy style prefixes
+            # We clean it just in case.
+            if "://" in db_url:
+                db_url = db_url.replace("postgresql+psycopg2://", "postgresql://")
+                db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+
+            self.conn = pg.connect(db_url)
         except pg.OperationalError as err:
-            print(err)
-            self.conn.close();
+            print(f"Error connecting to database: {err}")
+            if self.conn:
+                self.conn.close()
     
     def write(self, data):
         with self.conn.cursor() as cur:
