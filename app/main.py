@@ -70,9 +70,72 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
 
 # ── Lifespan ─────────────────────────────────────────────────────
+async def run_migrations():
+    """Ejecuta migraciones de Alembic programáticamente."""
+    from alembic.config import Config
+    from alembic import command
+    import os
+    
+    logger.info("🛠️ Revisando migraciones de base de datos...")
+    try:
+        # Nos aseguramos de estar en el directorio raíz para encontrar alembic.ini
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("✅ Base de datos actualizada.")
+    except Exception as e:
+        logger.error(f"❌ Error al ejecutar migraciones: {e}")
+
+async def seed_data():
+    """Crea roles iniciales y usuario admin si no existen."""
+    from app.db.session import AsyncSessionLocal
+    from app.models.role import Role
+    from app.models.user import User
+    from app.core.security import hash_password
+    from sqlalchemy import select
+    
+    logger.info("🌱 Verificando datos iniciales...")
+    async with AsyncSessionLocal() as db:
+        try:
+            # 1. Crear roles básicos
+            role_names = ["admin", "workshop_owner", "mechanic", "client"]
+            for rname in role_names:
+                result = await db.execute(select(Role).where(Role.name == rname))
+                if not result.scalar_one_or_none():
+                    db.add(Role(name=rname, description=f"Rol de {rname}"))
+            
+            await db.commit()
+            
+            # 2. Crear admin inicial desde .env
+            result = await db.execute(select(User).where(User.email == settings.FIRST_ADMIN_EMAIL))
+            if not result.scalar_one_or_none():
+                logger.info(f"👤 Creando usuario admin inicial: {settings.FIRST_ADMIN_EMAIL}")
+                admin_role_result = await db.execute(select(Role).where(Role.name == "admin"))
+                admin_role = admin_role_result.scalar_one()
+                
+                new_admin = User(
+                    email=settings.FIRST_ADMIN_EMAIL,
+                    password_hash=hash_password(settings.FIRST_ADMIN_PASSWORD),
+                    full_name="Administrador Sistema",
+                    is_active=True,
+                    roles=[admin_role]
+                )
+                db.add(new_admin)
+                await db.commit()
+                logger.info("✨ Admin creado con éxito.")
+            else:
+                logger.debug("Admin ya existe.")
+
+        except Exception as e:
+            logger.error(f"❌ Error al sembrar datos: {e}")
+            await db.rollback()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"🚀 Iniciando {settings.APP_NAME} v{settings.APP_VERSION}")
+    # Ejecutar migraciones antes de que la app acepte tráfico
+    await run_migrations()
+    # Sembrar datos iniciales (Roles y Admin)
+    await seed_data()
     yield
     logger.info("🛑 Servidor detenido.")
 
