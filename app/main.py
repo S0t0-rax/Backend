@@ -56,14 +56,16 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception as exc:
             ms = (time.perf_counter() - start) * 1000
-            logger.error(f"[{request_id}] ✖ ERROR ({ms:.1f}ms): {exc}")
+            logger.error(f"[{request_id}] [ERROR] ({ms:.1f}ms): {exc}")
+
             raise
         ms = (time.perf_counter() - start) * 1000
         lvl = "info" if response.status_code < 400 else "warning"
         getattr(logger, lvl)(
-            f"[{request_id}] ✔ {request.method} {request.url.path} "
+            f"[{request_id}] [OK] {request.method} {request.url.path} "
             f"→ {response.status_code} ({ms:.1f}ms)"
         )
+
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Process-Time"] = f"{ms:.1f}ms"
         return response
@@ -76,14 +78,17 @@ async def run_migrations():
     from alembic import command
     import os
     
-    logger.info("🛠️ Revisando migraciones de base de datos...")
+    logger.info("[DB] Revisando migraciones de base de datos...")
+
     try:
         # Nos aseguramos de estar en el directorio raíz para encontrar alembic.ini
         alembic_cfg = Config("alembic.ini")
         command.upgrade(alembic_cfg, "head")
-        logger.info("✅ Base de datos actualizada.")
+        logger.info("[OK] Base de datos actualizada.")
+
     except Exception as e:
-        logger.error(f"❌ Error al ejecutar migraciones: {e}")
+        logger.error(f"[ERROR] Al ejecutar migraciones: {e}")
+
 
 async def seed_data():
     """Crea roles iniciales, usuario admin y rescata usuarios viejos."""
@@ -137,12 +142,14 @@ async def seed_data():
             
             if migrated > 0:
                 await db.commit()
-                logger.info(f"✅ Se rescataron {migrated} usuarios con éxito.")
+                logger.info(f"[OK] Se rescataron {migrated} usuarios con éxito.")
+
 
             # 3. Crear admin desde .env solo si no hay ningún admin todavía
             result = await db.execute(select(User).where(User.email == settings.FIRST_ADMIN_EMAIL))
             if not result.scalar_one_or_none():
-                logger.info(f"👤 Creando usuario admin inicial: {settings.FIRST_ADMIN_EMAIL}")
+                logger.info(f"[USER] Creando usuario admin inicial: {settings.FIRST_ADMIN_EMAIL}")
+
                 new_admin = User(
                     email=settings.FIRST_ADMIN_EMAIL,
                     password_hash=hash_password(settings.FIRST_ADMIN_PASSWORD),
@@ -152,21 +159,25 @@ async def seed_data():
                 )
                 db.add(new_admin)
                 await db.commit()
-                logger.info("✨ Admin creado con éxito.")
+                logger.info("[OK] Admin creado con éxito.")
+
 
         except Exception as e:
-            logger.error(f"❌ Error al sembrar/rescatar datos: {e}")
+            logger.error(f"[ERROR] Al sembrar/rescatar datos: {e}")
+
             await db.rollback()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(f"🚀 Iniciando {settings.APP_NAME} v{settings.APP_VERSION}")
+    logger.info(f"[START] Iniciando {settings.APP_NAME} v{settings.APP_VERSION}")
+
     # Ejecutar migraciones antes de que la app acepte tráfico
     await run_migrations()
     # Sembrar datos y rescatar usuarios
     await seed_data()
     yield
-    logger.info("🛑 Servidor detenido.")
+    logger.info("[STOP] Servidor detenido.")
+
 
 
 # ── App ──────────────────────────────────────────────────────────

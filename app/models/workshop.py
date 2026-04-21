@@ -65,5 +65,27 @@ class Workshop(Base):
         "ServiceOrder", back_populates="workshop"
     )
 
+    @property
+    def latitude(self) -> float:
+        """Extrae latitud desde el objeto Geography."""
+        # GeoAlchemy2/PostGIS devuelve un objeto WKB o similar
+        # En SQLAlchemy 2.0 con asyncpg, el campo geom suele ser procesado por GeoAlchemy
+        if self.geom is not None:
+            # WKBElement tiene un atributo data
+            from geoalchemy2.shape import to_shape
+            point = to_shape(self.geom)
+            return point.y
+        return 0.0
+
+    @property
+    def longitude(self) -> float:
+        """Extrae longitud desde el objeto Geography."""
+        if self.geom is not None:
+            from geoalchemy2.shape import to_shape
+            point = to_shape(self.geom)
+            return point.x
+        return 0.0
+
     def __repr__(self) -> str:
+
         return f"<Workshop id={self.id} name={self.name}>"

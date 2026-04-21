@@ -12,6 +12,8 @@ class IncidentCreate(BaseModel):
     longitude: float = Field(..., ge=-180, le=180)
     address_reference: Optional[str] = None
     description: Optional[str] = None
+    workshop_id: Optional[int] = None
+
 
 
 class IncidentUpdate(BaseModel):

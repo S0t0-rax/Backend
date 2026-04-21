@@ -27,9 +27,11 @@ class WorkshopResponse(BaseModel):
     name: str
     tax_id: Optional[str]
     address_text: str
-    rating: Optional[Decimal]
+    latitude: float
+    longitude: float
 
     model_config = ConfigDict(from_attributes=True)
+
 
 
 class NearbyWorkshopResponse(WorkshopResponse):

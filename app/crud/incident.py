@@ -10,7 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.base import CRUDBase
 from app.models.incident import Incident, IncidentPhoto
+from app.models.service_order import ServiceOrder
 from app.schemas.incident import IncidentCreate, IncidentUpdate
+
 
 
 class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
@@ -48,7 +50,19 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         db.add(incident)
         await db.flush()
         await db.refresh(incident)
+
+        # Si el cliente escogió un taller, creamos la orden de servicio inmediatamente
+        if obj_in.workshop_id:
+            service_order = ServiceOrder(
+                incident_id=incident.id,
+                workshop_id=obj_in.workshop_id,
+                arrival_status="pending"
+            )
+            db.add(service_order)
+            await db.flush()
+
         return incident
+
 
     async def find_nearby(
         self,

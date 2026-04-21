@@ -30,7 +30,28 @@ class CRUDWorkshop(CRUDBase[Workshop, WorkshopCreate, WorkshopUpdate]):
         await db.refresh(workshop)
         return workshop
 
+    async def update(
+        self,
+        db: AsyncSession,
+        *,
+        db_obj: Workshop,
+        obj_in: WorkshopUpdate | dict[str, Any],
+    ) -> Workshop:
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.model_dump(exclude_unset=True)
+
+        if "latitude" in update_data or "longitude" in update_data:
+            lat = update_data.get("latitude", db_obj.latitude)
+            lng = update_data.get("longitude", db_obj.longitude)
+            point_wkt = f"SRID=4326;POINT({lng} {lat})"
+            db_obj.geom = ST_GeogFromText(point_wkt)
+
+        return await super().update(db, db_obj=db_obj, obj_in=update_data)
+
     async def find_nearby(
+
         self,
         db: AsyncSession,
         latitude: float,
