@@ -44,3 +44,12 @@ class IncidentResponse(BaseModel):
     photos: List[IncidentPhotoResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class IncidentGlobalResponse(IncidentResponse):
+    """Schema extendido para el admin con info de quien atiende."""
+    mechanic_name: Optional[str] = None
+    workshop_name: Optional[str] = None
+    client_name: Optional[str] = None
+    # Podríamos añadir más campos de ServiceOrder si fuera necesario
+

@@ -90,5 +90,56 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         await db.refresh(photo)
         return photo
 
+    async def get_all_incidents_with_details(self, db: AsyncSession) -> List[dict]:
+        """
+        Retorna todos los incidentes con información del cliente y del mecánico asignado.
+        Ideal para el panel de monitoreo global del administrador.
+        """
+        from app.models.user import User
+        from app.models.service_order import ServiceOrder
+        from app.models.workshop import Workshop
+        from sqlalchemy.orm import aliased
+
+        Mechanic = aliased(User)
+        
+        result = await db.execute(
+            select(
+                Incident,
+                User.full_name.label("client_name"),
+                Mechanic.full_name.label("mechanic_name"),
+                Workshop.name.label("workshop_name")
+            )
+            .join(User, Incident.client_id == User.id)
+            .outerjoin(ServiceOrder, Incident.id == ServiceOrder.incident_id)
+            .outerjoin(Mechanic, ServiceOrder.mechanic_id == Mechanic.id)
+            .outerjoin(Workshop, ServiceOrder.workshop_id == Workshop.id)
+            .order_by(Incident.reported_at.desc())
+        )
+
+        incidents_data = []
+        for row in result.all():
+            inc, c_name, m_name, w_name = row
+            # Convertimos el objeto SQLAlchemy a un diccionario compatible con el schema
+            # Ojo: IncidentResponse espera 'photos', así que las cargamos si es necesario
+            # Para el monitoreo global igual no necesitamos todas las fotos, pero por consistencia:
+            data = {
+                "id": inc.id,
+                "client_id": inc.client_id,
+                "car_id": inc.car_id,
+                "address_reference": inc.address_reference,
+                "description": inc.description,
+                "severity_level": inc.severity_level,
+                "status": inc.status,
+                "reported_at": inc.reported_at,
+                "client_name": c_name,
+                "mechanic_name": m_name,
+                "workshop_name": w_name,
+                "photos": [] # Simplificamos para no sobrecargar el dashboard global
+            }
+            incidents_data.append(data)
+        
+        return incidents_data
+
+
 
 crud_incident = CRUDIncident(Incident)
