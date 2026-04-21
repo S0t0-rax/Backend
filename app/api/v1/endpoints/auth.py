@@ -23,11 +23,13 @@ router = APIRouter(prefix="/auth", tags=["🔐 Autenticación"])
 @router.post("/register", response_model=UserResponse, status_code=201)
 async def register(data: UserCreate, db: DBSession):
     """Registra un nuevo usuario. Rol por defecto: client."""
-    # Evitar que usuarios se registren directamente como mecánicos.
-    if data.role_name and data.role_name.lower() == "mechanic":
+    # Solo permitir creación pública de Dueños de Taller desde la web.
+    # Los mecánicos deben ser creados por un dueño y los clientes solo desde la app móvil.
+    role = (data.role_name or "").lower()
+    if role != "workshop_owner":
         raise ConflictException(
-            "No es posible registrarse como mecánico desde la página. "
-            "Un dueño de taller debe crear la cuenta."
+            "Solo es posible registrarse como 'Dueño de Taller' desde la web. "
+            "Los clientes deben registrarse desde la app móvil y los mecánicos deben ser creados por un dueño."
         )
 
     existing = await crud_user.get_by_email(db, data.email)
