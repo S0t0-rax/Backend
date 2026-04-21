@@ -1,7 +1,7 @@
 """
 CRUD de Workshop con búsqueda geoespacial (talleres cercanos).
 """
-from typing import List
+from typing import Any, List
 
 from geoalchemy2.functions import ST_GeogFromText, ST_DWithin, ST_Distance
 from sqlalchemy import select
