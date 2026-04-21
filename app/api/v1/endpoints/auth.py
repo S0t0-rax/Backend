@@ -5,6 +5,7 @@ from fastapi import APIRouter
 
 from app.api.dependencies import CurrentUser, DBSession
 from app.core.exceptions import UnauthorizedException
+from app.core.exceptions import ConflictException
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -22,10 +23,17 @@ router = APIRouter(prefix="/auth", tags=["🔐 Autenticación"])
 @router.post("/register", response_model=UserResponse, status_code=201)
 async def register(data: UserCreate, db: DBSession):
     """Registra un nuevo usuario. Rol por defecto: client."""
-    from app.core.exceptions import ConflictException
+    # Evitar que usuarios se registren directamente como mecánicos.
+    if data.role_name and data.role_name.lower() == "mechanic":
+        raise ConflictException(
+            "No es posible registrarse como mecánico desde la página. "
+            "Un dueño de taller debe crear la cuenta."
+        )
+
     existing = await crud_user.get_by_email(db, data.email)
     if existing:
         raise ConflictException(f"El email '{data.email}' ya está registrado.")
+
     user = await crud_user.create(db, obj_in=data)
     return UserResponse.from_orm_with_roles(user)
 

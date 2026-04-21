@@ -46,6 +46,16 @@ class UserResponse(BaseModel):
             roles=[r.name for r in user.roles],
         )
 
+
+class MechanicStaffResponse(UserResponse):
+    """Respuesta para el endpoint de gestión de personal del dueño.
+
+    Incluye si el mecánico está ocupado y el taller donde está trabajando actualmente.
+    """
+    is_busy: bool = False
+    workshop_id: Optional[int] = None
+    workshop_name: Optional[str] = None
+
 class AdminUserUpdate(BaseModel):
     """Schema para edición de usuarios desde el panel Admin"""
     is_active: Optional[bool] = None
