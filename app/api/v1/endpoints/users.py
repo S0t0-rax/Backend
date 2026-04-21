@@ -120,7 +120,7 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
     return results
 
 
-@router.post("/mechanics", response_model=UserResponse, status_code=201)
+@router.post("/mechanics", response_model=MechanicStaffResponse, status_code=201)
 async def create_mechanic(
     data: UserCreate,
     db: DBSession,
@@ -158,7 +158,25 @@ async def create_mechanic(
         await db.flush()
 
     await db.refresh(user)
-    return UserResponse.from_orm_with_roles(user)
+    # Determinar si tiene una orden activa
+    so_active = await db.execute(
+        select(ServiceOrder).where(ServiceOrder.mechanic_id == user.id).where(ServiceOrder.started_at.isnot(None)).where(ServiceOrder.finished_at.is_(None))
+    )
+    is_busy = so_active.scalar_one_or_none() is not None
+
+    assigned_workshop_id = None
+    workshop_name = None
+    if workshop_id is not None:
+        assigned_workshop_id = workshop_id
+        w = await crud_workshop.get(db, workshop_id)
+        workshop_name = w.name if w else None
+
+    return MechanicStaffResponse(
+        **UserResponse.from_orm_with_roles(user).model_dump(),
+        is_busy=is_busy,
+        workshop_id=assigned_workshop_id,
+        workshop_name=workshop_name,
+    )
 
 
 @router.delete("/{user_id}")
