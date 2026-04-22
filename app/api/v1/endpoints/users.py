@@ -200,3 +200,62 @@ async def delete_user_logical(
     await db.flush()
     
     return {"message": "Usuario desactivado correctamente."}
+
+
+
+@router.put("/{user_id}/assign-workshop", response_model=MechanicStaffResponse)
+async def assign_workshop_to_mechanic(
+    user_id: int,
+    workshop_id: int | None,
+    db: DBSession,
+    owner: WorkshopOwnerOrAdmin,
+):
+    """Asigna o remueve a un mecánico de un taller. Permitido para el dueño del taller o admin."""
+    user = await crud_user.get(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
+    # Si se envía workshop_id, validar existencia y permisos del owner
+    target_workshop = None
+    if workshop_id is not None:
+        target_workshop = await crud_workshop.get(db, workshop_id)
+        if not target_workshop:
+            raise HTTPException(status_code=404, detail="Taller no encontrado.")
+        owner_roles = {r.name for r in owner.roles}
+        if "admin" not in owner_roles and target_workshop.owner_id != owner.id:
+            raise HTTPException(status_code=403, detail="No puedes asignar mecánicos a un taller que no administras.")
+
+    # Remover al mecánico de todos los talleres donde esté (si existe)
+    # Usamos la relación en Workshop.mechanics
+    q = select(Workshop).join(workshop_staff_table, workshop_staff_table.c.workshop_id == Workshop.id).where(workshop_staff_table.c.mechanic_id == user.id)
+    rows = await db.execute(q)
+    current_workshops = rows.scalars().all()
+    for w in current_workshops:
+        if user in w.mechanics:
+            w.mechanics.remove(user)
+            db.add(w)
+
+    # Si se indicó workshop_id, añadir el mecánico al taller objetivo
+    assigned_workshop_id = None
+    workshop_name = None
+    if target_workshop is not None:
+        target_workshop.mechanics.append(user)
+        db.add(target_workshop)
+        assigned_workshop_id = target_workshop.id
+        workshop_name = target_workshop.name
+
+    await db.flush()
+    await db.refresh(user)
+
+    # Determinar si tiene una orden activa
+    so_active = await db.execute(
+        select(ServiceOrder).where(ServiceOrder.mechanic_id == user.id).where(ServiceOrder.started_at.isnot(None)).where(ServiceOrder.finished_at.is_(None))
+    )
+    is_busy = so_active.scalar_one_or_none() is not None
+
+    return MechanicStaffResponse(
+        **UserResponse.from_orm_with_roles(user).model_dump(),
+        is_busy=is_busy,
+        workshop_id=assigned_workshop_id,
+        workshop_name=workshop_name,
+    )
