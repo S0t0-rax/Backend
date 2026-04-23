@@ -87,8 +87,11 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
         .subquery()
     )
 
+    # Queremos obtener dos cosas por mecánico:
+    # - active_workshop_id: el taller en el que está trabajando por una orden activa (si existe)
+    # - assigned_workshop_id: el taller al que pertenece por la tabla workshop_staff (si existe)
     q = (
-        select(User, active_so.c.workshop_id)
+        select(User, workshop_staff_table.c.workshop_id.label('assigned_workshop_id'), active_so.c.workshop_id.label('active_workshop_id'))
         .distinct()
         .join(workshop_staff_table, workshop_staff_table.c.mechanic_id == User.id)
         .join(Workshop, workshop_staff_table.c.workshop_id == Workshop.id)
@@ -100,10 +103,15 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
     results = []
     for row in rows.all():
         user = row.User
-        active_workshop_id = row[1]
+        assigned_workshop_id = row.assigned_workshop_id
+        active_workshop_id = row.active_workshop_id
+
+        # If there is an active workshop (order in progress), prefer it for "where the mechanic is working now".
+        chosen_workshop_id = active_workshop_id or assigned_workshop_id
+
         workshop_name = None
-        if active_workshop_id:
-            w = await crud_workshop.get(db, active_workshop_id)
+        if chosen_workshop_id:
+            w = await crud_workshop.get(db, chosen_workshop_id)
             workshop_name = w.name if w else None
 
         is_busy = bool(active_workshop_id)
@@ -112,7 +120,7 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
             MechanicStaffResponse(
                 **UserResponse.from_orm_with_roles(user).model_dump(),
                 is_busy=is_busy,
-                workshop_id=active_workshop_id,
+                workshop_id=chosen_workshop_id,
                 workshop_name=workshop_name,
             )
         )

@@ -17,6 +17,7 @@ class WorkshopCreate(BaseModel):
 class WorkshopUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=150)
     address_text: Optional[str] = None
+    tax_id: Optional[str] = Field(None, max_length=50)
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
 

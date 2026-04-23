@@ -47,6 +47,9 @@ class CRUDWorkshop(CRUDBase[Workshop, WorkshopCreate, WorkshopUpdate]):
             lng = update_data.get("longitude", db_obj.longitude)
             point_wkt = f"SRID=4326;POINT({lng} {lat})"
             db_obj.geom = ST_GeogFromText(point_wkt)
+            # Eliminar para que super().update no intente setear sobre @property (causa AttributeError)
+            update_data.pop("latitude", None)
+            update_data.pop("longitude", None)
 
         return await super().update(db, db_obj=db_obj, obj_in=update_data)
 
