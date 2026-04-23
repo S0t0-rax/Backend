@@ -72,6 +72,24 @@ class Incident(Base):
     def __repr__(self) -> str:
         return f"<Incident id={self.id} status={self.status}>"
 
+    @property
+    def latitude(self) -> float:
+        """Extrae latitud desde el objeto Geography."""
+        if self.incident_location is not None:
+            from geoalchemy2.shape import to_shape
+            point = to_shape(self.incident_location)
+            return point.y
+        return 0.0
+
+    @property
+    def longitude(self) -> float:
+        """Extrae longitud desde el objeto Geography."""
+        if self.incident_location is not None:
+            from geoalchemy2.shape import to_shape
+            point = to_shape(self.incident_location)
+            return point.x
+        return 0.0
+
 
 class IncidentPhoto(Base):
     """

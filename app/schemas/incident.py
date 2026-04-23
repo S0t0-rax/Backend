@@ -43,6 +43,8 @@ class IncidentResponse(BaseModel):
     severity_level: str
     status: str
     reported_at: datetime
+    latitude: float
+    longitude: float
     photos: List[IncidentPhotoResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
