@@ -3,7 +3,7 @@ Modelos: Incident + IncidentPhoto
 - `Incident`: incluye `incident_location` GEOGRAPHY(POINT, 4326)
 - `IncidentPhoto`: incluye campos de análisis de IA (JSONB)
 """
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, ClassVar
 from datetime import datetime
 
 from geoalchemy2 import Geography
@@ -73,8 +73,9 @@ class Incident(Base):
         return f"<Incident id={self.id} status={self.status}>"
 
     # ── Atributos temporales para evitar errores de greenlet/async ──
-    _latitude: Optional[float] = None
-    _longitude: Optional[float] = None
+    # Usamos ClassVar para que SQLAlchemy no intente mapearlos como columnas
+    _latitude: ClassVar[Optional[float]] = None
+    _longitude: ClassVar[Optional[float]] = None
 
     @property
     def latitude(self) -> float:
