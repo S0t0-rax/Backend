@@ -49,17 +49,20 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             incident = Incident(
                 client_id=client_id,
                 car_id=obj_in.car_id,
-                incident_location=ST_GeogFromText(f"SRID=4326;{point_wkt}"),
+                incident_location=WKTElement(point_wkt, srid=4326),
                 address_reference=obj_in.address_reference,
                 description=obj_in.description,
                 severity_level="low",
                 status="open",
                 reported_at=func.now()
             )
+            # Cacheamos para evitar el error de greenlet/IO durante la serialización
+            incident._latitude = obj_in.latitude
+            incident._longitude = obj_in.longitude
             
             db.add(incident)
             await db.flush()
-            # await db.refresh(incident) # Evitamos el refresh por si acaso el driver asyncpg tiene problemas con el tipo Geography
+            # await db.refresh(incident) 
 
             # Si el cliente escogió un taller, creamos la orden de servicio inmediatamente
             if obj_in.workshop_id and obj_in.workshop_id > 0:

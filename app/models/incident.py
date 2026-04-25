@@ -72,18 +72,21 @@ class Incident(Base):
     def __repr__(self) -> str:
         return f"<Incident id={self.id} status={self.status}>"
 
+    # ── Atributos temporales para evitar errores de greenlet/async ──
+    _latitude: Optional[float] = None
+    _longitude: Optional[float] = None
+
     @property
     def latitude(self) -> float:
-        """Extrae latitud desde el objeto Geography."""
+        """Extrae latitud desde el objeto Geography o caché temporal."""
+        if self._latitude is not None:
+            return self._latitude
+            
         loc = self.incident_location
         if loc is not None:
             try:
                 from geoalchemy2.shape import to_shape
-                # Manejo de WKBElement, WKTElement o strings hex
-                if isinstance(loc, (str, bytes)):
-                    # Si es una cadena, to_shape suele fallar si no es WKB
-                    # pero GeoAlchemy2 a veces lo maneja.
-                    pass
+                # Si es un elemento ya procesado o WKB
                 point = to_shape(loc)
                 return point.y
             except Exception:
@@ -92,7 +95,10 @@ class Incident(Base):
 
     @property
     def longitude(self) -> float:
-        """Extrae longitud desde el objeto Geography."""
+        """Extrae longitud desde el objeto Geography o caché temporal."""
+        if self._longitude is not None:
+            return self._longitude
+            
         loc = self.incident_location
         if loc is not None:
             try:
