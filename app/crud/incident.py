@@ -39,13 +39,15 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         self, db: AsyncSession, *, obj_in: IncidentCreate, client_id: int
     ) -> Incident:
         """Crea incidente con ubicación GPS (PostGIS POINT)."""
-        point_wkt = f"SRID=4326;POINT({obj_in.longitude} {obj_in.latitude})"
+        from geoalchemy2.elements import WKTElement
+        point_wkt = f"POINT({obj_in.longitude} {obj_in.latitude})"
         incident = Incident(
             client_id=client_id,
             car_id=obj_in.car_id,
-            incident_location=ST_GeogFromText(point_wkt),
+            incident_location=WKTElement(point_wkt, srid=4326),
             address_reference=obj_in.address_reference,
             description=obj_in.description,
+            severity_level="low",  # Valor por defecto obligatorio
         )
         db.add(incident)
         await db.flush()
@@ -61,6 +63,7 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             db.add(service_order)
             await db.flush()
 
+        incident.photos = []  # Evita el error de carga diferida (lazy load)
         return incident
 
 

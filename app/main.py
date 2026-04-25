@@ -76,14 +76,23 @@ async def run_migrations():
     """Ejecuta migraciones de Alembic programáticamente."""
     from alembic.config import Config
     from alembic import command
-    import os
+    import asyncio
     
-    logger.info("[DB] Revisando migraciones de base de datos...")
+    logger.info("[DB] Revisando migraciones y extensiones de base de datos...")
 
     try:
-        # Nos aseguramos de estar en el directorio raíz para encontrar alembic.ini
+        # Nos aseguramos de que PostGIS esté activo
+        from app.db.session import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            await db.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
+            await db.commit()
+            logger.info("[OK] Extensión PostGIS verificada.")
+        
+        # Usamos run_in_executor para que alembic (que es síncrono) no bloquee el loop
         alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, command.upgrade, alembic_cfg, "head")
         logger.info("[OK] Base de datos actualizada.")
 
     except Exception as e:

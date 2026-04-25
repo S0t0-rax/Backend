@@ -23,8 +23,13 @@ async def report_incident(
     Reporta un nuevo incidente vehicular con ubicación GPS.
     La localización se almacena como GEOGRAPHY(POINT, 4326) en PostGIS.
     """
-    incident = await crud_incident.create(db, obj_in=data, client_id=current_user.id)
-    return incident
+    from loguru import logger
+    try:
+        incident = await crud_incident.create(db, obj_in=data, client_id=current_user.id)
+        return incident
+    except Exception as e:
+        logger.exception(f"Error al reportar incidente: {e}")
+        raise e
 
 
 @router.get("/", response_model=List[IncidentResponse])
