@@ -114,19 +114,32 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             )
         
         result = await db.execute(query.order_by(Incident.reported_at.desc()))
-        incidents = list(result.scalars().all())
+        db_incidents = list(result.scalars().all())
         
-        # Pre-poblamos el caché de lat/lng para evitar errores de greenlet/IO al serializar
-        for inc in incidents:
-            # Forzamos la extracción ahora que estamos en el contexto asíncrono del CRUD
-            # Esto evita que el serializador de FastAPI lo intente fuera de contexto
-            try:
-                inc._latitude = inc.latitude
-                inc._longitude = inc.longitude
-            except:
-                pass
-                
-        return incidents
+        # DEBUG: Contar cuántos hay realmente en la DB para diagnosticar
+        from loguru import logger
+        total_result = await db.execute(select(func.count(Incident.id)))
+        total_count = total_result.scalar_one()
+        logger.debug(f"Búsqueda cercana: Encontrados {len(db_incidents)} abiertos de un total de {total_count} incidentes en DB.")
+
+        # Retornamos los esquemas directamente para evitar errores de greenlet/lazy load
+        from app.schemas.incident import IncidentResponse
+        return [
+            IncidentResponse(
+                id=inc.id,
+                client_id=inc.client_id,
+                car_id=inc.car_id,
+                address_reference=inc.address_reference,
+                description=inc.description,
+                severity_level=inc.severity_level,
+                status=inc.status,
+                reported_at=inc.reported_at,
+                latitude=inc.latitude, # Accedemos aquí que estamos en el contexto asíncrono
+                longitude=inc.longitude,
+                photos=[]
+            )
+            for inc in db_incidents
+        ]
 
     async def add_photo(
         self,
