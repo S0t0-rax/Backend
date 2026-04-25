@@ -39,16 +39,22 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         self, db: AsyncSession, *, obj_in: IncidentCreate, client_id: int
     ) -> Incident:
         """Crea incidente con ubicación GPS (PostGIS POINT)."""
-        from geoalchemy2.elements import WKTElement
+        from sqlalchemy import text
+        
+        # Usamos una inserción manual con ST_GeogFromText para máxima compatibilidad con asyncpg
         point_wkt = f"POINT({obj_in.longitude} {obj_in.latitude})"
+        
         incident = Incident(
             client_id=client_id,
             car_id=obj_in.car_id,
-            incident_location=WKTElement(point_wkt, srid=4326),
             address_reference=obj_in.address_reference,
             description=obj_in.description,
-            severity_level="low",  # Valor por defecto obligatorio
+            severity_level="low",
+            status="open"
         )
+        # Asignamos la localización usando la función de PostGIS directamente
+        incident.incident_location = text(f"ST_GeogFromText('SRID=4326;{point_wkt}')")
+        
         db.add(incident)
         await db.flush()
         await db.refresh(incident)
@@ -148,6 +154,8 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
                 "severity_level": inc.severity_level,
                 "status": inc.status,
                 "reported_at": inc.reported_at,
+                "latitude": inc.latitude,  # Crucial: extraído vía propiedad del modelo
+                "longitude": inc.longitude, # Crucial: extraído vía propiedad del modelo
                 "client_name": c_name,
                 "mechanic_name": m_name,
                 "workshop_name": w_name,

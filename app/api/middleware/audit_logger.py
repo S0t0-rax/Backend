@@ -45,15 +45,20 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
             entity = path.split("/")[3] if len(path.split("/")) > 3 else "system"
             
             # Insertar en base de datos en un entorno asíncrono
-            async with AsyncSessionLocal() as db:
-                audit = AuditLog(
-                    user_id=user_id,
-                    action=action,
-                    entity=entity,
-                    ip_address=request.client.host if request.client else None,
-                    # details = {"status_code": response.status_code}
-                )
-                db.add(audit)
-                await db.commit()
+            try:
+                async with AsyncSessionLocal() as db:
+                    audit = AuditLog(
+                        user_id=user_id,
+                        action=action,
+                        entity=entity,
+                        ip_address=request.client.host if request.client else None,
+                        # details = {"status_code": response.status_code}
+                    )
+                    db.add(audit)
+                    await db.commit()
+            except Exception as e:
+                # Si falla la auditoría, no queremos tumbar el request principal
+                from loguru import logger
+                logger.error(f"[AuditMiddleware] Error al guardar bitácora: {e}")
                 
         return response

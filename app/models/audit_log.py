@@ -4,7 +4,7 @@ Modelo: AuditLog (Bitácora) — Registro centralizado de auditoría.
 from typing import Optional
 from datetime import datetime
 
-from sqlalchemy import Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import BigInteger, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -17,8 +17,8 @@ class AuditLog(Base):
     """
     __tablename__ = "audit_logs"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     entity: Mapped[str] = mapped_column(String(100), nullable=False)
     entity_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

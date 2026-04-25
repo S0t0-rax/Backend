@@ -46,7 +46,7 @@ async def list_my_incidents(
 @router.get("/global", response_model=List[IncidentGlobalResponse])
 async def list_global_incidents(
     db: DBSession,
-    _: AdminOnly,
+    _: AnyStaff,
 ):
     """
     Lista todos los incidentes del sistema con detalles de mecánicos asignados.
