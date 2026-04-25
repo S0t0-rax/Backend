@@ -102,18 +102,31 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         radius_meters: float = 5000,
     ) -> List[Incident]:
         """
-        Busca incidentes abiertos dentro del radio especificado.
-        Usa índice GIST de PostGIS: ST_DWithin para performance.
+        Busca incidentes abiertos. Si el radio es > 0, filtra por cercanía.
         """
-        point = f"SRID=4326;POINT({longitude} {latitude})"
-        result = await db.execute(
-            select(Incident)
-            .where(
-                Incident.status == "open",
-                ST_DWithin(Incident.incident_location, ST_GeogFromText(point), radius_meters),
+        query = select(Incident).where(Incident.status == "open")
+        
+        # Si el radio es mayor a 0, aplicamos el filtro de PostGIS
+        if radius_meters > 0:
+            point = f"SRID=4326;POINT({longitude} {latitude})"
+            query = query.where(
+                ST_DWithin(Incident.incident_location, ST_GeogFromText(point), radius_meters)
             )
-        )
-        return list(result.scalars().all())
+        
+        result = await db.execute(query.order_by(Incident.reported_at.desc()))
+        incidents = list(result.scalars().all())
+        
+        # Pre-poblamos el caché de lat/lng para evitar errores de greenlet/IO al serializar
+        for inc in incidents:
+            # Forzamos la extracción ahora que estamos en el contexto asíncrono del CRUD
+            # Esto evita que el serializador de FastAPI lo intente fuera de contexto
+            try:
+                inc._latitude = inc.latitude
+                inc._longitude = inc.longitude
+            except:
+                pass
+                
+        return incidents
 
     async def add_photo(
         self,
