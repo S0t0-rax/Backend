@@ -3,7 +3,7 @@ Modelos: Incident + IncidentPhoto
 - `Incident`: incluye `incident_location` GEOGRAPHY(POINT, 4326)
 - `IncidentPhoto`: incluye campos de análisis de IA (JSONB)
 """
-from typing import TYPE_CHECKING, List, Optional, ClassVar
+from typing import TYPE_CHECKING, List, Optional
 from datetime import datetime
 
 from geoalchemy2 import Geography
@@ -30,6 +30,7 @@ class Incident(Base):
     Campo PostGIS: incident_location GEOGRAPHY(POINT, 4326)
     """
     __tablename__ = "incidents"
+    __allow_unmapped__ = True # Permitir atributos anotados no mapeados (como _latitude)
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     client_id: Mapped[Optional[int]] = mapped_column(
@@ -72,10 +73,9 @@ class Incident(Base):
     def __repr__(self) -> str:
         return f"<Incident id={self.id} status={self.status}>"
 
-    # ── Atributos temporales para evitar errores de greenlet/async ──
-    # Usamos ClassVar para que SQLAlchemy no intente mapearlos como columnas
-    _latitude: ClassVar[Optional[float]] = None
-    _longitude: ClassVar[Optional[float]] = None
+    # ── Atributos de instancia para evitar errores de greenlet/async ──
+    _latitude: Optional[float] = None
+    _longitude: Optional[float] = None
 
     @property
     def latitude(self) -> float:

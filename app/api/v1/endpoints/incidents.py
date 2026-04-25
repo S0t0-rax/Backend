@@ -29,15 +29,7 @@ async def report_incident(
         return incident
     except Exception as e:
         logger.exception(f"Error al reportar incidente: {e}")
-        from fastapi.responses import JSONResponse
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "INTERNAL_SERVER_ERROR",
-                "message": str(e),
-                "detail": "Error en el servidor al procesar el incidente. Ver logs para más detalles."
-            }
-        )
+        raise e
 
 
 @router.get("/", response_model=List[IncidentResponse])

@@ -62,7 +62,6 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             
             db.add(incident)
             await db.flush()
-            # await db.refresh(incident) 
 
             # Si el cliente escogió un taller, creamos la orden de servicio inmediatamente
             if obj_in.workshop_id and obj_in.workshop_id > 0:
@@ -75,8 +74,21 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
                 db.add(service_order)
                 await db.flush()
 
-            incident.photos = []  # Evita el error de carga diferida (lazy load)
-            return incident
+            # Retornamos el esquema de respuesta directamente para evitar fallos de serialización ORM (greenlet error)
+            from app.schemas.incident import IncidentResponse
+            return IncidentResponse(
+                id=incident.id,
+                client_id=incident.client_id,
+                car_id=incident.car_id,
+                address_reference=incident.address_reference,
+                description=incident.description,
+                severity_level=incident.severity_level,
+                status=incident.status,
+                reported_at=incident.reported_at,
+                latitude=obj_in.latitude,
+                longitude=obj_in.longitude,
+                photos=[]
+            )
         except Exception as e:
             logger.error(f"Error en CRUDIncident.create: {e}")
             raise e
