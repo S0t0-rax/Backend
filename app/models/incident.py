@@ -75,26 +75,29 @@ class Incident(Base):
     @property
     def latitude(self) -> float:
         """Extrae latitud desde el objeto Geography."""
-        if self.incident_location is not None:
+        loc = self.incident_location
+        if loc is not None:
             try:
                 from geoalchemy2.shape import to_shape
-                # Si es una cadena (hex de asyncpg), to_shape podría fallar o requerir conversión
-                # GeoAlchemy2 suele manejarlo, pero si falla, intentamos una conversión segura.
-                point = to_shape(self.incident_location)
+                # Manejo de WKBElement, WKTElement o strings hex
+                if isinstance(loc, (str, bytes)):
+                    # Si es una cadena, to_shape suele fallar si no es WKB
+                    # pero GeoAlchemy2 a veces lo maneja.
+                    pass
+                point = to_shape(loc)
                 return point.y
             except Exception:
-                # Fallback: si es una cadena hex o algo no procesado, retornamos 0.0
-                # En producción esto debería estar bien manejado por el driver
                 return 0.0
         return 0.0
 
     @property
     def longitude(self) -> float:
         """Extrae longitud desde el objeto Geography."""
-        if self.incident_location is not None:
+        loc = self.incident_location
+        if loc is not None:
             try:
                 from geoalchemy2.shape import to_shape
-                point = to_shape(self.incident_location)
+                point = to_shape(loc)
                 return point.x
             except Exception:
                 return 0.0

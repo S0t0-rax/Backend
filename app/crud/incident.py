@@ -4,7 +4,8 @@ CRUD de Incidente con soporte geoespacial.
 from typing import List, Optional
 
 from geoalchemy2.functions import ST_GeogFromText, ST_DWithin, ST_Distance
-from sqlalchemy import select
+from geoalchemy2.elements import WKTElement
+from sqlalchemy import select, func, text
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,38 +40,42 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         self, db: AsyncSession, *, obj_in: IncidentCreate, client_id: int
     ) -> Incident:
         """Crea incidente con ubicación GPS (PostGIS POINT)."""
-        from sqlalchemy import text
+        from loguru import logger
         
-        # Usamos una inserción manual con ST_GeogFromText para máxima compatibilidad con asyncpg
-        point_wkt = f"POINT({obj_in.longitude} {obj_in.latitude})"
-        
-        incident = Incident(
-            client_id=client_id,
-            car_id=obj_in.car_id,
-            address_reference=obj_in.address_reference,
-            description=obj_in.description,
-            severity_level="low",
-            status="open"
-        )
-        # Asignamos la localización usando la función de PostGIS directamente
-        incident.incident_location = text(f"ST_GeogFromText('SRID=4326;{point_wkt}')")
-        
-        db.add(incident)
-        await db.flush()
-        await db.refresh(incident)
-
-        # Si el cliente escogió un taller, creamos la orden de servicio inmediatamente
-        if obj_in.workshop_id:
-            service_order = ServiceOrder(
-                incident_id=incident.id,
-                workshop_id=obj_in.workshop_id,
-                arrival_status="pending"
+        try:
+            point_wkt = f"POINT({obj_in.longitude} {obj_in.latitude})"
+            logger.debug(f"Creando incidente para cliente {client_id} en {point_wkt}")
+            
+            incident = Incident(
+                client_id=client_id,
+                car_id=obj_in.car_id,
+                incident_location=WKTElement(point_wkt, srid=4326),
+                address_reference=obj_in.address_reference,
+                description=obj_in.description,
+                severity_level="low",
+                status="open"
             )
-            db.add(service_order)
+            
+            db.add(incident)
             await db.flush()
+            await db.refresh(incident)
 
-        incident.photos = []  # Evita el error de carga diferida (lazy load)
-        return incident
+            # Si el cliente escogió un taller, creamos la orden de servicio inmediatamente
+            if obj_in.workshop_id and obj_in.workshop_id > 0:
+                logger.debug(f"Asignando taller {obj_in.workshop_id} al incidente {incident.id}")
+                service_order = ServiceOrder(
+                    incident_id=incident.id,
+                    workshop_id=obj_in.workshop_id,
+                    arrival_status="pending"
+                )
+                db.add(service_order)
+                await db.flush()
+
+            incident.photos = []  # Evita el error de carga diferida (lazy load)
+            return incident
+        except Exception as e:
+            logger.error(f"Error en CRUDIncident.create: {e}")
+            raise e
 
 
     async def find_nearby(
