@@ -61,7 +61,7 @@ async def nearby_incidents(
     _: AnyStaff,
     latitude: float = Query(..., ge=-90, le=90),
     longitude: float = Query(..., ge=-180, le=180),
-    radius_meters: float = Query(5000, ge=100, le=50000),
+    radius_meters: float = Query(5000, ge=0, le=50000),
 ):
     """
     Busca incidentes abiertos en el radio dado.
