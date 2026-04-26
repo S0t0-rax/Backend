@@ -93,56 +93,67 @@ async def update_incident(
     if not incident:
         raise NotFoundException("Incidente")
 
-    old_status = incident.status
-    updated = await crud_incident.update(db, db_obj=incident, obj_in=data)
+    try:
+        old_status = incident.status
+        updated = await crud_incident.update(db, db_obj=incident, obj_in=data)
 
-    # Auditoría automática de cambio de estado
-    if data.status and data.status != old_status:
-        history = StatusHistory(
-            incident_id=incident_id,
-            old_status=old_status,
-            new_status=data.status,
-        )
-        db.add(history)
-        await db.flush()
-
-    # Procesar asignación de mecánicos y taller
-    if data.mechanic_ids or data.workshop_id:
-        from app.models.user import User
-        from app.models.service_order import ServiceOrder
-        from sqlalchemy import select, update
-
-        if data.mechanic_ids:
-            # 1. Marcar mecánicos como ocupados y asignar incidente
-            await db.execute(
-                update(User)
-                .where(User.id.in_(data.mechanic_ids))
-                .values(status="busy", current_incident_id=incident_id)
-            )
-
-        # 2. Asegurar que haya una ServiceOrder
-        stmt = select(ServiceOrder).where(ServiceOrder.incident_id == incident_id)
-        res = await db.execute(stmt)
-        service_order = res.scalar_one_or_none()
-        
-        if service_order:
-            if data.mechanic_ids:
-                service_order.mechanic_id = data.mechanic_ids[0]
-            if data.workshop_id:
-                service_order.workshop_id = data.workshop_id
-        else:
-            # Crear ServiceOrder si no existe
-            new_so = ServiceOrder(
+        # Auditoría automática de cambio de estado
+        if data.status and data.status != old_status:
+            from app.models.status_history import StatusHistory
+            history = StatusHistory(
                 incident_id=incident_id,
-                mechanic_id=data.mechanic_ids[0] if data.mechanic_ids else None,
-                workshop_id=data.workshop_id,
-                arrival_status="pending"
+                old_status=old_status,
+                new_status=data.status,
             )
-            db.add(new_so)
-        
-        await db.flush()
+            db.add(history)
+            await db.flush()
 
-    return updated
+        # Procesar asignación de mecánicos y taller
+        if data.mechanic_ids or data.workshop_id:
+            from app.models.user import User
+            from app.models.service_order import ServiceOrder
+            from sqlalchemy import select, update
+
+            if data.mechanic_ids:
+                # 1. Marcar mecánicos como ocupados y asignar incidente
+                await db.execute(
+                    update(User)
+                    .where(User.id.in_(data.mechanic_ids))
+                    .values(status="busy", current_incident_id=incident_id)
+                )
+
+            # 2. Asegurar que haya una ServiceOrder
+            stmt = select(ServiceOrder).where(ServiceOrder.incident_id == incident_id)
+            res = await db.execute(stmt)
+            service_order = res.scalar_one_or_none()
+            
+            if service_order:
+                if data.mechanic_ids:
+                    service_order.mechanic_id = data.mechanic_ids[0]
+                if data.workshop_id:
+                    service_order.workshop_id = data.workshop_id
+            else:
+                # Crear ServiceOrder si no existe
+                new_so = ServiceOrder(
+                    incident_id=incident_id,
+                    mechanic_id=data.mechanic_ids[0] if data.mechanic_ids else None,
+                    workshop_id=data.workshop_id,
+                    arrival_status="pending"
+                )
+                db.add(new_so)
+            
+            await db.flush()
+
+        await db.commit()
+        await db.refresh(updated)
+        return updated
+    except Exception as e:
+        await db.rollback()
+        from fastapi import HTTPException
+        import traceback
+        error_details = f"{str(e)}\n{traceback.format_exc()}"
+        print(error_details)
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 
 @router.post("/{incident_id}/photos", response_model=IncidentResponse)
