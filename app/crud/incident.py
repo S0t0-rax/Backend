@@ -255,6 +255,7 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             query = query.where(Incident.client_id == client_id)
         if mechanic_id:
             query = query.where(ServiceOrder.mechanic_id == mechanic_id)
+            query = query.where(Incident.status.in_(["assigned", "in_progress"]))
         if owner_id:
             query = query.where(Workshop.owner_id == owner_id)
             query = query.where(Incident.status.in_(["assigned", "in_progress"]))

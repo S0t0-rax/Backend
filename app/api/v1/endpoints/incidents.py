@@ -65,27 +65,12 @@ async def list_mechanic_tasks(
 ):
     """
     Lista los incidentes asignados al mecánico actual.
-    Máximo 3 tareas simultáneas permitidas.
     """
     from app.core.exceptions import ForbiddenException
     roles = {r.name for r in current_user.roles}
     if "mechanic" not in roles and "admin" not in roles:
         raise ForbiddenException("Solo mecánicos pueden ver sus tareas asignadas.")
         
-    from app.models.service_order import ServiceOrder
-    from sqlalchemy import select
-    
-    result = await db.execute(
-        select(Incident)
-        .join(ServiceOrder, Incident.id == ServiceOrder.incident_id)
-        .where(ServiceOrder.mechanic_id == current_user.id)
-        .where(Incident.status.in_(["assigned", "in_progress"]))
-        .order_by(Incident.reported_at.desc())
-    )
-    db_incidents = result.scalars().all()
-    
-    # Reutilizamos el método de detalles para que el mecánico vea toda la info
-    # pero filtrado por su ID.
     return await crud_incident.get_client_incidents_with_details(db, None, mechanic_id=current_user.id)
 
 
