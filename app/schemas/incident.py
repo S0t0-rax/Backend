@@ -57,5 +57,10 @@ class IncidentGlobalResponse(IncidentResponse):
     mechanic_name: Optional[str] = None
     workshop_name: Optional[str] = None
     client_name: Optional[str] = None
-    # Podríamos añadir más campos de ServiceOrder si fuera necesario
+
+class IncidentClientResponse(IncidentResponse):
+    """Schema para que el cliente vea quién le atiende."""
+    workshop_name: Optional[str] = None
+    mechanic_name: Optional[str] = None
+    arrival_status: Optional[str] = None
 

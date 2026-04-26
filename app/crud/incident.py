@@ -249,5 +249,50 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         ]
 
 
+    async def get_client_incidents_with_details(self, db: AsyncSession, client_id: int) -> List[dict]:
+        """Retorna incidentes de un cliente con info de quién le atiende."""
+        from app.models.user import User
+        from app.models.service_order import ServiceOrder
+        from app.models.workshop import Workshop
+        from sqlalchemy.orm import aliased
+
+        Mechanic = aliased(User)
+        
+        result = await db.execute(
+            select(
+                Incident,
+                Mechanic.full_name.label("mechanic_name"),
+                Workshop.name.label("workshop_name"),
+                ServiceOrder.arrival_status
+            )
+            .outerjoin(ServiceOrder, Incident.id == ServiceOrder.incident_id)
+            .outerjoin(Mechanic, ServiceOrder.mechanic_id == Mechanic.id)
+            .outerjoin(Workshop, ServiceOrder.workshop_id == Workshop.id)
+            .where(Incident.client_id == client_id)
+            .order_by(Incident.reported_at.desc())
+        )
+
+        results = []
+        for row in result.all():
+            inc, m_name, w_name, a_status = row
+            data = {
+                "id": inc.id,
+                "client_id": inc.client_id,
+                "car_id": inc.car_id,
+                "address_reference": inc.address_reference,
+                "description": inc.description,
+                "severity_level": inc.severity_level,
+                "status": inc.status,
+                "reported_at": inc.reported_at,
+                "latitude": inc.latitude,
+                "longitude": inc.longitude,
+                "workshop_name": w_name,
+                "mechanic_name": m_name,
+                "arrival_status": a_status,
+                "photos": [] 
+            }
+            results.append(data)
+        
+        return results
 
 crud_incident = CRUDIncident(Incident)

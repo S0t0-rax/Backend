@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Query, UploadFile
 
 from app.api.dependencies import AdminOnly, AnyStaff, CurrentUser, DBSession
 from app.crud.incident import crud_incident
-from app.schemas.incident import IncidentCreate, IncidentResponse, IncidentUpdate, IncidentGlobalResponse
+from app.schemas.incident import IncidentCreate, IncidentResponse, IncidentUpdate, IncidentGlobalResponse, IncidentClientResponse
 from app.services.ai_service import ai_service
 
 router = APIRouter(prefix="/incidents", tags=["🚨 Incidentes"])
@@ -32,15 +32,13 @@ async def report_incident(
         raise e
 
 
-@router.get("/", response_model=List[IncidentResponse])
+@router.get("/", response_model=List[IncidentClientResponse])
 async def list_my_incidents(
     current_user: CurrentUser,
     db: DBSession,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, le=200),
 ):
-    """Lista los incidentes del cliente autenticado."""
-    return await crud_incident.get_by_client(db, current_user.id, skip=skip, limit=limit)
+    """Lista los incidentes del cliente autenticado con info de seguimiento."""
+    return await crud_incident.get_client_incidents_with_details(db, current_user.id)
     
 
 @router.get("/assigned", response_model=List[IncidentResponse])
