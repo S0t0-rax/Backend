@@ -147,23 +147,29 @@ async def update_incident(
             from sqlalchemy import update
             from datetime import datetime
             
-            # 1. Marcar hora de fin en la ServiceOrder
+            # 1. Marcar hora de fin en la ServiceOrder y asegurar estado
             await db.execute(
                 update(ServiceOrder)
                 .where(ServiceOrder.incident_id == incident_id)
                 .values(finished_at=datetime.now())
             )
             
-            # 2. Liberar al mecánico (si hay uno asignado)
+            # 2. Liberar al mecánico y sincronizar User.status
             stmt_so = select(ServiceOrder).where(ServiceOrder.incident_id == incident_id)
             res_so = await db.execute(stmt_so)
             so = res_so.scalar_one_or_none()
             if so and so.mechanic_id:
-                # 3. Ver si quedan más tareas activas
-                other_tasks_stmt = select(ServiceOrder.incident_id).where(
-                    ServiceOrder.mechanic_id == so.mechanic_id,
-                    ServiceOrder.finished_at.is_(None),
-                    ServiceOrder.incident_id != incident_id
+                # Buscar otras tareas que REALMENTE estén activas (incident.status in [assigned, in_progress])
+                from app.models.incident import Incident as IncidentModel
+                other_tasks_stmt = (
+                    select(ServiceOrder.incident_id)
+                    .join(IncidentModel, ServiceOrder.incident_id == IncidentModel.id)
+                    .where(
+                        ServiceOrder.mechanic_id == so.mechanic_id,
+                        ServiceOrder.finished_at.is_(None),
+                        IncidentModel.status.in_(["assigned", "in_progress"]),
+                        IncidentModel.id != incident_id
+                    )
                 )
                 other_tasks_res = await db.execute(other_tasks_stmt)
                 remaining_tasks = [r[0] for r in other_tasks_res.all()]

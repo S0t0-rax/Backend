@@ -107,10 +107,16 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
         user = row.User
         assigned_workshop_id = row.assigned_workshop_id
 
-        # Obtener IDs de incidentes activos
-        tasks_stmt = select(ServiceOrder.incident_id).where(
-            ServiceOrder.mechanic_id == user.id,
-            ServiceOrder.finished_at.is_(None)
+        # Obtener IDs de incidentes activos (filtrando por estado del incidente también)
+        from app.models.incident import Incident as IncidentModel
+        tasks_stmt = (
+            select(ServiceOrder.incident_id)
+            .join(IncidentModel, ServiceOrder.incident_id == IncidentModel.id)
+            .where(
+                ServiceOrder.mechanic_id == user.id,
+                ServiceOrder.finished_at.is_(None),
+                IncidentModel.status.in_(["assigned", "in_progress"])
+            )
         )
         tasks_res = await db.execute(tasks_stmt)
         active_incident_ids = [r[0] for r in tasks_res.all()]
