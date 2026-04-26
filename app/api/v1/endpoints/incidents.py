@@ -138,7 +138,7 @@ async def update_incident(
                     incident_id=incident_id,
                     mechanic_id=data.mechanic_ids[0] if data.mechanic_ids else None,
                     workshop_id=data.workshop_id,
-                    arrival_status="pending"
+                    arrival_status="scheduled"
                 )
                 db.add(new_so)
             

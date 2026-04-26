@@ -69,7 +69,7 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
                 service_order = ServiceOrder(
                     incident_id=incident.id,
                     workshop_id=obj_in.workshop_id,
-                    arrival_status="pending"
+                    arrival_status="scheduled"
                 )
                 db.add(service_order)
                 await db.flush()
