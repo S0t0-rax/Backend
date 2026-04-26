@@ -89,7 +89,7 @@ async def update_incident(
     from app.core.exceptions import NotFoundException
     from app.models.status_history import StatusHistory
 
-    incident = await crud_incident.get(db, incident_id)
+    incident = await crud_incident.get_with_photos(db, incident_id)
     if not incident:
         raise NotFoundException("Incidente")
 
@@ -145,8 +145,7 @@ async def update_incident(
             await db.flush()
 
         await db.commit()
-        await db.refresh(updated)
-        return updated
+        return await crud_incident.get_with_photos(db, incident_id)
     except Exception as e:
         await db.rollback()
         from fastapi import HTTPException
