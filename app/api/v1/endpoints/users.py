@@ -14,7 +14,7 @@ from app.models.role import Role
 from app.models.workshop import Workshop
 from app.core.exceptions import ConflictException
 from app.models.workshop import workshop_staff_table
-from sqlalchemy import distinct, select, and_, outerjoin
+from sqlalchemy import distinct, select, and_, outerjoin, func
 from app.models.service_order import ServiceOrder
 from app.schemas.user import MechanicStaffResponse
 
