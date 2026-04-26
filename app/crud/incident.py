@@ -264,7 +264,15 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
 
         results = []
         for row in result.all():
-            inc, m_name, w_name, so_id, a_status, s_at, st_at, f_at = row
+            # Usar acceso por nombre para evitar errores de posición
+            inc = row.Incident
+            m_name = row.mechanic_name
+            w_name = row.workshop_name
+            so_id = row.so_id
+            a_status = row.arrival_status
+            s_at = row.scheduled_at
+            st_at = row.started_at
+            f_at = row.finished_at
             data = {
                 "id": inc.id,
                 "service_order_id": so_id,
