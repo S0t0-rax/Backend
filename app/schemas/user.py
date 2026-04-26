@@ -58,6 +58,7 @@ class MechanicStaffResponse(UserResponse):
     """
     workshop_id: Optional[int] = None
     workshop_name: Optional[str] = None
+    active_tasks_count: int = 0
 
 class AdminUserUpdate(BaseModel):
     """Schema para edición de usuarios desde el panel Admin"""

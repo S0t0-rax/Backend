@@ -215,42 +215,19 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         
         return incidents_data
 
-    async def get_by_workshop_owner(self, db: AsyncSession, owner_id: int) -> List[Incident]:
-        """Retorna incidentes asignados a talleres que pertenecen al owner dado."""
-        from app.models.workshop import Workshop
-        from app.models.service_order import ServiceOrder
-        
-        result = await db.execute(
-            select(Incident)
-            .join(ServiceOrder, Incident.id == ServiceOrder.incident_id)
-            .join(Workshop, ServiceOrder.workshop_id == Workshop.id)
-            .where(Workshop.owner_id == owner_id)
-            .where(Incident.status.in_(["assigned", "in_progress"]))
-            .order_by(Incident.reported_at.desc())
-        )
-        db_incidents = result.scalars().all()
-        
-        from app.schemas.incident import IncidentResponse
-        return [
-            IncidentResponse(
-                id=inc.id,
-                client_id=inc.client_id,
-                car_id=inc.car_id,
-                address_reference=inc.address_reference,
-                description=inc.description,
-                severity_level=inc.severity_level,
-                status=inc.status,
-                reported_at=inc.reported_at,
-                latitude=inc.latitude,
-                longitude=inc.longitude,
-                photos=[]
-            )
-            for inc in db_incidents
-        ]
+    async def get_by_workshop_owner(self, db: AsyncSession, owner_id: int) -> List[dict]:
+        """Retorna incidentes asignados a talleres del owner con detalles completos."""
+        return await self.get_client_incidents_with_details(db, None, owner_id=owner_id)
 
 
-    async def get_client_incidents_with_details(self, db: AsyncSession, client_id: Optional[int], mechanic_id: Optional[int] = None) -> List[dict]:
-        """Retorna incidentes de un cliente o mecánico con info de quién le atiende."""
+    async def get_client_incidents_with_details(
+        self, 
+        db: AsyncSession, 
+        client_id: Optional[int], 
+        mechanic_id: Optional[int] = None,
+        owner_id: Optional[int] = None
+    ) -> List[dict]:
+        """Retorna incidentes con info de quién le atiende, filtrado por cliente, mecánico o dueño."""
         from app.models.user import User
         from app.models.service_order import ServiceOrder
         from app.models.workshop import Workshop
@@ -278,6 +255,9 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             query = query.where(Incident.client_id == client_id)
         if mechanic_id:
             query = query.where(ServiceOrder.mechanic_id == mechanic_id)
+        if owner_id:
+            query = query.where(Workshop.owner_id == owner_id)
+            query = query.where(Incident.status.in_(["assigned", "in_progress"]))
             
         result = await db.execute(query.order_by(Incident.reported_at.desc()))
 

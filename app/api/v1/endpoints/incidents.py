@@ -41,7 +41,7 @@ async def list_my_incidents(
     return await crud_incident.get_client_incidents_with_details(db, current_user.id)
     
 
-@router.get("/assigned", response_model=List[IncidentResponse])
+@router.get("/assigned", response_model=List[IncidentClientResponse])
 async def list_assigned_incidents(
     current_user: CurrentUser,
     db: DBSession,

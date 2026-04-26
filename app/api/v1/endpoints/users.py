@@ -87,15 +87,17 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
         .subquery()
     )
 
-    # Queremos obtener dos cosas por mecánico:
-    # - active_workshop_id: el taller en el que está trabajando por una orden activa (si existe)
-    # - assigned_workshop_id: el taller al que pertenece por la tabla workshop_staff (si existe)
+    # Queremos obtener:
+    # - assigned_workshop_id: el taller al que pertenece por la tabla workshop_staff
+    # - active_tasks_count: cuántas órdenes tiene abiertas
     q = (
-        select(User, workshop_staff_table.c.workshop_id.label('assigned_workshop_id'), active_so.c.workshop_id.label('active_workshop_id'))
+        select(
+            User, 
+            workshop_staff_table.c.workshop_id.label('assigned_workshop_id'),
+        )
         .distinct()
         .join(workshop_staff_table, workshop_staff_table.c.mechanic_id == User.id)
         .join(Workshop, workshop_staff_table.c.workshop_id == Workshop.id)
-        .outerjoin(active_so, active_so.c.mechanic_id == User.id)
         .where(Workshop.owner_id == owner.id)
     )
 
@@ -104,23 +106,28 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
     for row in rows.all():
         user = row.User
         assigned_workshop_id = row.assigned_workshop_id
-        active_workshop_id = row.active_workshop_id
 
-        # If there is an active workshop (order in progress), prefer it for "where the mechanic is working now".
-        chosen_workshop_id = active_workshop_id or assigned_workshop_id
+        # Contar tareas activas (donde finished_at es NULL)
+        task_count_stmt = select(func.count(ServiceOrder.id)).where(
+            ServiceOrder.mechanic_id == user.id,
+            ServiceOrder.finished_at.is_(None)
+        )
+        count_res = await db.execute(task_count_stmt)
+        active_tasks_count = count_res.scalar_one()
 
         workshop_name = None
-        if chosen_workshop_id:
-            w = await crud_workshop.get(db, chosen_workshop_id)
+        if assigned_workshop_id:
+            w = await crud_workshop.get(db, assigned_workshop_id)
             workshop_name = w.name if w else None
 
-        is_busy = bool(active_workshop_id)
+        is_busy = active_tasks_count > 0
 
         results.append(
             MechanicStaffResponse(
                 **UserResponse.from_orm_with_roles(user).model_dump(),
                 is_busy=is_busy,
-                workshop_id=chosen_workshop_id,
+                active_tasks_count=active_tasks_count,
+                workshop_id=assigned_workshop_id,
                 workshop_name=workshop_name,
             )
         )
