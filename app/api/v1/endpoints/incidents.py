@@ -140,6 +140,46 @@ async def update_incident(
             db.add(history)
             await db.flush()
 
+        # Lógica especial si el estado cambia a resuelto (finalizado)
+        if data.status == "resolved":
+            from app.models.service_order import ServiceOrder
+            from app.models.user import User
+            from sqlalchemy import update
+            from datetime import datetime
+            
+            # 1. Marcar hora de fin en la ServiceOrder
+            await db.execute(
+                update(ServiceOrder)
+                .where(ServiceOrder.incident_id == incident_id)
+                .values(finished_at=datetime.now())
+            )
+            
+            # 2. Liberar al mecánico (si hay uno asignado)
+            stmt_so = select(ServiceOrder).where(ServiceOrder.incident_id == incident_id)
+            res_so = await db.execute(stmt_so)
+            so = res_so.scalar_one_or_none()
+            if so and so.mechanic_id:
+                # 3. Ver si quedan más tareas activas
+                other_tasks_stmt = select(ServiceOrder.incident_id).where(
+                    ServiceOrder.mechanic_id == so.mechanic_id,
+                    ServiceOrder.finished_at.is_(None),
+                    ServiceOrder.incident_id != incident_id
+                )
+                other_tasks_res = await db.execute(other_tasks_stmt)
+                remaining_tasks = [r[0] for r in other_tasks_res.all()]
+                
+                new_current_id = remaining_tasks[0] if remaining_tasks else None
+                new_status = "busy" if remaining_tasks else "available"
+
+                await db.execute(
+                    update(User)
+                    .where(User.id == so.mechanic_id)
+                    .values(
+                        current_incident_id=new_current_id,
+                        status=new_status
+                    )
+                )
+
         # Procesar asignación de mecánicos y taller
         if data.mechanic_ids or data.workshop_id:
             from app.models.user import User

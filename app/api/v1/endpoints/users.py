@@ -107,13 +107,14 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
         user = row.User
         assigned_workshop_id = row.assigned_workshop_id
 
-        # Contar tareas activas (donde finished_at es NULL)
-        task_count_stmt = select(func.count(ServiceOrder.id)).where(
+        # Obtener IDs de incidentes activos
+        tasks_stmt = select(ServiceOrder.incident_id).where(
             ServiceOrder.mechanic_id == user.id,
             ServiceOrder.finished_at.is_(None)
         )
-        count_res = await db.execute(task_count_stmt)
-        active_tasks_count = count_res.scalar_one()
+        tasks_res = await db.execute(tasks_stmt)
+        active_incident_ids = [r[0] for r in tasks_res.all()]
+        active_tasks_count = len(active_incident_ids)
 
         workshop_name = None
         if assigned_workshop_id:
@@ -127,6 +128,7 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
                 **UserResponse.from_orm_with_roles(user).model_dump(),
                 is_busy=is_busy,
                 active_tasks_count=active_tasks_count,
+                active_incident_ids=active_incident_ids,
                 workshop_id=assigned_workshop_id,
                 workshop_name=workshop_name,
             )
