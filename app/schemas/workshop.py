@@ -32,7 +32,7 @@ class WorkshopResponse(BaseModel):
     address_text: str
     latitude: float
     longitude: float
-    is_available: bool
+    is_available: bool = True
 
     model_config = ConfigDict(from_attributes=True)
 
