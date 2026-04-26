@@ -25,7 +25,8 @@ class ServiceOrder(Base):
     Tabla `service_orders` — orden de trabajo asociada a un incidente.
 
     - Tracking en tiempo real: current_mechanic_location GEOGRAPHY(POINT)
-    - Ciclo de vida: scheduled → in_progress → completed
+    - Ciclo de vida (arrival_status): pending → on_the_way → arrived
+    - Ciclo de vida (incidents): open → assigned → in_progress → resolved | cancelled
     """
     __tablename__ = "service_orders"
 
