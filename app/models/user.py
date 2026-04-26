@@ -5,7 +5,7 @@ Incluye campo espacial `current_location` mediante GeoAlchemy2.
 from typing import TYPE_CHECKING, List, Optional
 
 from geoalchemy2 import Geography
-from sqlalchemy import BigInteger, Boolean, Column, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
