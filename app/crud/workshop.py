@@ -23,6 +23,7 @@ class CRUDWorkshop(CRUDBase[Workshop, WorkshopCreate, WorkshopUpdate]):
             name=obj_in.name,
             tax_id=obj_in.tax_id,
             address_text=obj_in.address_text,
+            is_available=obj_in.is_available,
             geom=ST_GeogFromText(point_wkt),
         )
         db.add(workshop)
@@ -74,7 +75,10 @@ class CRUDWorkshop(CRUDBase[Workshop, WorkshopCreate, WorkshopUpdate]):
                 Workshop,
                 ST_Distance(Workshop.geom, geog_point).label("distance_meters"),
             )
-            .where(ST_DWithin(Workshop.geom, geog_point, radius_meters))
+            .where(
+                ST_DWithin(Workshop.geom, geog_point, radius_meters),
+                Workshop.is_available == True
+            )
             .order_by("distance_meters")
             .limit(limit)
         )

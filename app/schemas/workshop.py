@@ -12,6 +12,7 @@ class WorkshopCreate(BaseModel):
     address_text: str = Field(..., min_length=5)
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
+    is_available: bool = True
 
 
 class WorkshopUpdate(BaseModel):
@@ -20,6 +21,7 @@ class WorkshopUpdate(BaseModel):
     tax_id: Optional[str] = Field(None, max_length=50)
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
+    is_available: Optional[bool] = None
 
 
 class WorkshopResponse(BaseModel):
@@ -30,6 +32,7 @@ class WorkshopResponse(BaseModel):
     address_text: str
     latitude: float
     longitude: float
+    is_available: bool
 
     model_config = ConfigDict(from_attributes=True)
 

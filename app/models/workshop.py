@@ -51,6 +51,7 @@ class Workshop(Base):
     )
 
     rating: Mapped[Optional[Decimal]] = mapped_column(Numeric(3, 2), default=5.0)
+    is_available: Mapped[bool] = mapped_column(default=True)
 
     # ── Relaciones ─────────────────────────────────────────────
     owner: Mapped[Optional["User"]] = relationship(
