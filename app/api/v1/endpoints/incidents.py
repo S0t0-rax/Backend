@@ -5,7 +5,8 @@ Incluye: reporte, subida de fotos con análisis IA, búsqueda por proximidad.
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, File, Query, UploadFile
+from fastapi import APIRouter, File, Query, UploadFile, HTTPException
+from sqlalchemy import select, update, func
 
 from app.api.dependencies import AdminOnly, AnyStaff, CurrentUser, DBSession
 from app.crud.incident import crud_incident
@@ -144,7 +145,6 @@ async def update_incident(
         if data.status == "resolved":
             from app.models.service_order import ServiceOrder
             from app.models.user import User
-            from sqlalchemy import update
             from datetime import datetime
             
             # 1. Marcar hora de fin en la ServiceOrder y asegurar estado
@@ -190,7 +190,6 @@ async def update_incident(
         if data.mechanic_ids or data.workshop_id:
             from app.models.user import User
             from app.models.service_order import ServiceOrder
-            from sqlalchemy import select, update, func
             from app.core.exceptions import BadRequestException
 
             # 1. Validar límite de 3 tareas por mecánico
@@ -241,7 +240,6 @@ async def update_incident(
         return await crud_incident.get_with_photos(db, incident_id)
     except Exception as e:
         await db.rollback()
-        from fastapi import HTTPException
         import traceback
         error_details = f"{str(e)}\n{traceback.format_exc()}"
         print(error_details)
