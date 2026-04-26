@@ -22,6 +22,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, max_length=100)
     phone: Optional[str] = Field(None, max_length=20)
+    email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
 
 

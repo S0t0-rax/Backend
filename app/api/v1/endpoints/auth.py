@@ -25,11 +25,11 @@ async def register(data: UserCreate, db: DBSession):
     """Registra un nuevo usuario. Rol por defecto: client."""
     # Solo permitir creación pública de Dueños de Taller desde la web.
     # Los mecánicos deben ser creados por un dueño y los clientes solo desde la app móvil.
-    role = (data.role_name or "").lower()
-    if role != "workshop_owner":
+    role = (data.role_name or "client").lower()
+    if role not in ["workshop_owner", "client"]:
         raise ConflictException(
-            "Solo es posible registrarse como 'Dueño de Taller' desde la web. "
-            "Los clientes deben registrarse desde la app móvil y los mecánicos deben ser creados por un dueño."
+            f"El rol '{role}' no es válido para registro público. "
+            "Solo dueños de taller y clientes pueden registrarse directamente."
         )
 
     existing = await crud_user.get_by_email(db, data.email)
@@ -97,6 +97,13 @@ async def update_me(data: UserUpdate, db: DBSession, current_user: CurrentUser):
         current_user.full_name = data.full_name
     if data.phone is not None:
         current_user.phone = data.phone
+    if data.email is not None and data.email != current_user.email:
+        # Verificar si el nuevo email ya está en uso
+        existing = await crud_user.get_by_email(db, data.email)
+        if existing:
+            from app.core.exceptions import ConflictException
+            raise ConflictException(f"El email '{data.email}' ya está en uso.")
+        current_user.email = data.email
     
     db.add(current_user)
     await db.flush()

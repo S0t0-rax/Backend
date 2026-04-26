@@ -141,6 +141,16 @@ async def update_incident(
             db.add(history)
             await db.flush()
 
+        # Lógica especial para cuando el trabajo inicia
+        if data.status == "in_progress":
+            from app.models.service_order import ServiceOrder
+            from datetime import datetime
+            await db.execute(
+                update(ServiceOrder)
+                .where(ServiceOrder.incident_id == incident_id)
+                .values(started_at=datetime.now())
+            )
+
         # Lógica especial si el estado cambia a resuelto (finalizado)
         if data.status == "resolved":
             from app.models.service_order import ServiceOrder
