@@ -21,6 +21,8 @@ class IncidentUpdate(BaseModel):
     severity_level: Optional[str] = None
     status: Optional[str] = None
     address_reference: Optional[str] = None
+    mechanic_ids: Optional[List[int]] = None
+    workshop_id: Optional[int] = None
 
 
 class IncidentPhotoResponse(BaseModel):

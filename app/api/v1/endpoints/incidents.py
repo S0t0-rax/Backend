@@ -106,6 +106,58 @@ async def update_incident(
         db.add(history)
         await db.flush()
 
+    # Procesar asignación de mecánicos
+    if data.mechanic_ids:
+        from app.models.user import User
+        from app.models.service_order import ServiceOrder
+        from sqlalchemy import select, update
+
+        # 1. Marcar mecánicos como ocupados y asignar incidente
+        await db.execute(
+            update(User)
+            .where(User.id.in_(data.mechanic_ids))
+            .values(status="busy", current_incident_id=incident_id)
+        )
+
+        # 2. Asegurar que haya una ServiceOrder y asignar al menos el primer mecánico (legacy support)
+        stmt = select(ServiceOrder).where(ServiceOrder.incident_id == incident_id)
+        res = await db.execute(stmt)
+        service_order = res.scalar_one_or_none()
+        
+        if service_order:
+            service_order.mechanic_id = data.mechanic_ids[0]
+            if data.workshop_id:
+                service_order.workshop_id = data.workshop_id
+        else:
+            # Crear ServiceOrder si no existe
+            new_so = ServiceOrder(
+                incident_id=incident_id,
+                mechanic_id=data.mechanic_ids[0],
+                workshop_id=data.workshop_id,
+                arrival_status="pending"
+            )
+            db.add(new_so)
+        
+        await db.flush()
+
+    # Si se envía workshop_id pero no hay mecánicos, también asegurar SO
+    elif data.workshop_id:
+        from app.models.service_order import ServiceOrder
+        stmt = select(ServiceOrder).where(ServiceOrder.incident_id == incident_id)
+        res = await db.execute(stmt)
+        service_order = res.scalar_one_or_none()
+        
+        if service_order:
+            service_order.workshop_id = data.workshop_id
+        else:
+            new_so = ServiceOrder(
+                incident_id=incident_id,
+                workshop_id=data.workshop_id,
+                arrival_status="pending"
+            )
+            db.add(new_so)
+        await db.flush()
+
     return updated
 
 

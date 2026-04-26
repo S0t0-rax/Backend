@@ -43,6 +43,12 @@ class User(Base, TimestampMixin):
     )
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    
+    # -- Disponibilidad y asignación --
+    status: Mapped[str] = mapped_column(String(20), default="available", nullable=False)
+    current_incident_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("incidents.id"), nullable=True
+    )
 
     # ── Relaciones ─────────────────────────────────────────────
     roles: Mapped[List["Role"]] = relationship(

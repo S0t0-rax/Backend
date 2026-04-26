@@ -31,6 +31,8 @@ class UserResponse(BaseModel):
     full_name: str
     phone: Optional[str]
     is_active: bool
+    status: str = "available"
+    current_incident_id: Optional[int] = None
     roles: List[str] = []
 
     model_config = ConfigDict(from_attributes=True)
@@ -43,6 +45,8 @@ class UserResponse(BaseModel):
             full_name=user.full_name,
             phone=user.phone,
             is_active=user.is_active,
+            status=getattr(user, 'status', 'available'),
+            current_incident_id=getattr(user, 'current_incident_id', None),
             roles=[r.name for r in user.roles],
         )
 
@@ -52,7 +56,6 @@ class MechanicStaffResponse(UserResponse):
 
     Incluye si el mecánico está ocupado y el taller donde está trabajando actualmente.
     """
-    is_busy: bool = False
     workshop_id: Optional[int] = None
     workshop_name: Optional[str] = None
 
