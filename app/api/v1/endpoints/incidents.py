@@ -41,6 +41,23 @@ async def list_my_incidents(
 ):
     """Lista los incidentes del cliente autenticado."""
     return await crud_incident.get_by_client(db, current_user.id, skip=skip, limit=limit)
+    
+
+@router.get("/assigned", response_model=List[IncidentResponse])
+async def list_assigned_incidents(
+    current_user: CurrentUser,
+    db: DBSession,
+):
+    """
+    Lista incidentes asignados a los talleres del usuario (owner).
+    Permite la gestión de las órdenes activas.
+    """
+    from app.core.exceptions import ForbiddenException
+    roles = {r.name for r in current_user.roles}
+    if "workshop_owner" not in roles and "admin" not in roles:
+        raise ForbiddenException("Solo dueños de talleres pueden ver sus asignaciones.")
+        
+    return await crud_incident.get_by_workshop_owner(db, current_user.id)
 
 
 @router.get("/global", response_model=List[IncidentGlobalResponse])
@@ -62,13 +79,14 @@ async def nearby_incidents(
     latitude: float = Query(..., ge=-90, le=90),
     longitude: float = Query(..., ge=-180, le=180),
     radius_meters: float = Query(5000, ge=0, le=50000),
+    status: Optional[str] = "open"
 ):
     """
     Busca incidentes abiertos en el radio dado.
     Usa el índice GIST de PostGIS: idx_incidents_location para performance.
     Solo accesible por staff (admin, workshop_owner, mechanic).
     """
-    return await crud_incident.find_nearby(db, latitude, longitude, radius_meters)
+    return await crud_incident.find_nearby(db, latitude, longitude, radius_meters, status=status)
 
 
 @router.get("/{incident_id}", response_model=IncidentResponse)

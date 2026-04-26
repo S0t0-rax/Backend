@@ -100,11 +100,14 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         latitude: float,
         longitude: float,
         radius_meters: float = 5000,
+        status: Optional[str] = "open"
     ) -> List[Incident]:
         """
-        Busca incidentes abiertos. Si el radio es > 0, filtra por cercanía.
+        Busca incidentes. Si el radio es > 0, filtra por cercanía.
         """
-        query = select(Incident).where(Incident.status == "open")
+        query = select(Incident)
+        if status:
+            query = query.where(Incident.status == status)
         
         # Si el radio es mayor a 0, aplicamos el filtro de PostGIS
         if radius_meters > 0:
@@ -211,6 +214,39 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             incidents_data.append(data)
         
         return incidents_data
+
+    async def get_by_workshop_owner(self, db: AsyncSession, owner_id: int) -> List[Incident]:
+        """Retorna incidentes asignados a talleres que pertenecen al owner dado."""
+        from app.models.workshop import Workshop
+        from app.models.service_order import ServiceOrder
+        
+        result = await db.execute(
+            select(Incident)
+            .join(ServiceOrder, Incident.id == ServiceOrder.incident_id)
+            .join(Workshop, ServiceOrder.workshop_id == Workshop.id)
+            .where(Workshop.owner_id == owner_id)
+            .where(Incident.status.in_(["assigned", "in_progress"]))
+            .order_by(Incident.reported_at.desc())
+        )
+        db_incidents = result.scalars().all()
+        
+        from app.schemas.incident import IncidentResponse
+        return [
+            IncidentResponse(
+                id=inc.id,
+                client_id=inc.client_id,
+                car_id=inc.car_id,
+                address_reference=inc.address_reference,
+                description=inc.description,
+                severity_level=inc.severity_level,
+                status=inc.status,
+                reported_at=inc.reported_at,
+                latitude=inc.latitude,
+                longitude=inc.longitude,
+                photos=[]
+            )
+            for inc in db_incidents
+        ]
 
 
 
