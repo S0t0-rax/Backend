@@ -12,6 +12,8 @@ from app.api.v1.endpoints.users import router as users_router
 from app.api.v1.endpoints.audit import router as audit_router
 from app.api.v1.endpoints.cars import router as cars_router
 
+from app.api.v1.endpoints.service_orders import router as service_orders_router
+
 api_router = APIRouter(prefix="/api/v1")
 
 api_router.include_router(health_router)
@@ -22,4 +24,5 @@ api_router.include_router(incidents_router)
 api_router.include_router(workshops_router)
 api_router.include_router(payments_router)
 api_router.include_router(cars_router)
+api_router.include_router(service_orders_router)
 

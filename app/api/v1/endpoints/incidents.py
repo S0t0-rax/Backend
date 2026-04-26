@@ -58,6 +58,37 @@ async def list_assigned_incidents(
     return await crud_incident.get_by_workshop_owner(db, current_user.id)
 
 
+@router.get("/mechanic/tasks", response_model=List[IncidentClientResponse])
+async def list_mechanic_tasks(
+    current_user: CurrentUser,
+    db: DBSession,
+):
+    """
+    Lista los incidentes asignados al mecánico actual.
+    Máximo 3 tareas simultáneas permitidas.
+    """
+    from app.core.exceptions import ForbiddenException
+    roles = {r.name for r in current_user.roles}
+    if "mechanic" not in roles and "admin" not in roles:
+        raise ForbiddenException("Solo mecánicos pueden ver sus tareas asignadas.")
+        
+    from app.models.service_order import ServiceOrder
+    from sqlalchemy import select
+    
+    result = await db.execute(
+        select(Incident)
+        .join(ServiceOrder, Incident.id == ServiceOrder.incident_id)
+        .where(ServiceOrder.mechanic_id == current_user.id)
+        .where(Incident.status.in_(["assigned", "in_progress"]))
+        .order_by(Incident.reported_at.desc())
+    )
+    db_incidents = result.scalars().all()
+    
+    # Reutilizamos el método de detalles para que el mecánico vea toda la info
+    # pero filtrado por su ID.
+    return await crud_incident.get_client_incidents_with_details(db, None, mechanic_id=current_user.id)
+
+
 @router.get("/global", response_model=List[IncidentGlobalResponse])
 async def list_global_incidents(
     db: DBSession,
@@ -128,10 +159,25 @@ async def update_incident(
         if data.mechanic_ids or data.workshop_id:
             from app.models.user import User
             from app.models.service_order import ServiceOrder
-            from sqlalchemy import select, update
+            from sqlalchemy import select, update, func
+            from app.core.exceptions import BadRequestException
 
+            # 1. Validar límite de 3 tareas por mecánico
             if data.mechanic_ids:
-                # 1. Marcar mecánicos como ocupados y asignar incidente
+                for mech_id in data.mechanic_ids:
+                    task_count_stmt = select(func.count(ServiceOrder.id)).where(
+                        ServiceOrder.mechanic_id == mech_id,
+                        ServiceOrder.finished_at.is_(None)
+                    )
+                    res_count = await db.execute(task_count_stmt)
+                    count = res_count.scalar_one()
+                    if count >= 3:
+                        # Buscamos el nombre del mecánico para el error
+                        mech_res = await db.execute(select(User.full_name).where(User.id == mech_id))
+                        mech_name = mech_res.scalar_one()
+                        raise BadRequestException(f"El mecánico {mech_name} ya tiene 3 tareas asignadas.")
+
+                # Marcar mecánicos como ocupados
                 await db.execute(
                     update(User)
                     .where(User.id.in_(data.mechanic_ids))

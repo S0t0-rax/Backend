@@ -249,8 +249,8 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         ]
 
 
-    async def get_client_incidents_with_details(self, db: AsyncSession, client_id: int) -> List[dict]:
-        """Retorna incidentes de un cliente con info de quién le atiende."""
+    async def get_client_incidents_with_details(self, db: AsyncSession, client_id: Optional[int], mechanic_id: Optional[int] = None) -> List[dict]:
+        """Retorna incidentes de un cliente o mecánico con info de quién le atiende."""
         from app.models.user import User
         from app.models.service_order import ServiceOrder
         from app.models.workshop import Workshop
@@ -258,25 +258,38 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
 
         Mechanic = aliased(User)
         
-        result = await db.execute(
+        query = (
             select(
                 Incident,
                 Mechanic.full_name.label("mechanic_name"),
                 Workshop.name.label("workshop_name"),
-                ServiceOrder.arrival_status
+                ServiceOrder.id.label("so_id"),
+                ServiceOrder.arrival_status,
+                ServiceOrder.scheduled_at,
+                ServiceOrder.started_at,
+                ServiceOrder.finished_at
             )
             .outerjoin(ServiceOrder, Incident.id == ServiceOrder.incident_id)
             .outerjoin(Mechanic, ServiceOrder.mechanic_id == Mechanic.id)
             .outerjoin(Workshop, ServiceOrder.workshop_id == Workshop.id)
-            .where(Incident.client_id == client_id)
-            .order_by(Incident.reported_at.desc())
         )
+        
+        if client_id:
+            query = query.where(Incident.client_id == client_id)
+        if mechanic_id:
+            query = query.where(ServiceOrder.mechanic_id == mechanic_id)
+            
+        result = await db.execute(query.order_by(Incident.reported_at.desc()))
 
         results = []
         for row in result.all():
-            inc, m_name, w_name, a_status = row
+            inc, m_name, w_name, so_id, a_status, s_at, st_at, f_at = row
             data = {
                 "id": inc.id,
+                "service_order_id": so_id,
+                "scheduled_at": s_at,
+                "started_at": st_at,
+                "finished_at": f_at,
                 "client_id": inc.client_id,
                 "car_id": inc.car_id,
                 "address_reference": inc.address_reference,
