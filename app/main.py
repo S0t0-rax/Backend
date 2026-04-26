@@ -86,8 +86,17 @@ async def run_migrations():
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
             await db.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
+            
+            # Parche automático para nuevas columnas en users (evita errores de migración)
+            try:
+                await db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'available'"))
+                await db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS current_incident_id BIGINT REFERENCES incidents(id)"))
+                logger.info("[DB] Columnas de estado y asignación verificadas en 'users'.")
+            except Exception as patch_err:
+                logger.warning(f"[DB] No se pudo aplicar el parche de columnas (quizás ya existen): {patch_err}")
+
             await db.commit()
-            logger.info("[OK] Extensión PostGIS verificada.")
+            logger.info("[OK] Extensión PostGIS y esquema base verificados.")
         
         # Usamos run_in_executor para que alembic (que es síncrono) no bloquee el loop
         alembic_cfg = Config("alembic.ini")
