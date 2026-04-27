@@ -100,3 +100,23 @@ async def update_workshop(
     if "admin" not in roles and w.owner_id != current_user.id:
         raise ForbiddenException("No tienes permiso para modificar este taller.")
     return await crud_workshop.update(db, db_obj=w, obj_in=data)
+
+
+@router.delete("/{workshop_id}", status_code=204)
+async def delete_workshop(
+    workshop_id: int,
+    current_user: WorkshopOwnerOrAdmin,
+    db: DBSession,
+):
+    """Elimina un taller. Solo el dueño o admin."""
+    from app.core.exceptions import NotFoundException, ForbiddenException
+    w = await crud_workshop.get(db, workshop_id)
+    if not w:
+        raise NotFoundException("Taller")
+        
+    roles = {r.name for r in current_user.roles}
+    if "admin" not in roles and w.owner_id != current_user.id:
+        raise ForbiddenException("No tienes permiso para eliminar este taller.")
+        
+    await crud_workshop.delete(db, id=workshop_id)
+    return None
