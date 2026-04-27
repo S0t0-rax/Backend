@@ -88,17 +88,15 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
     )
 
     # Queremos obtener:
-    # - assigned_workshop_id: el taller al que pertenece por la tabla workshop_staff
+    # - assigned_workshop_id: el taller al que pertenece por la tabla workshop_staff (si tiene)
     # - active_tasks_count: cuántas órdenes tiene abiertas
     q = (
         select(
             User, 
             workshop_staff_table.c.workshop_id.label('assigned_workshop_id'),
         )
-        .distinct()
-        .join(workshop_staff_table, workshop_staff_table.c.mechanic_id == User.id)
-        .join(Workshop, workshop_staff_table.c.workshop_id == Workshop.id)
-        .where(Workshop.owner_id == owner.id)
+        .outerjoin(workshop_staff_table, workshop_staff_table.c.mechanic_id == User.id)
+        .where(User.employer_id == owner.id)
     )
 
     rows = await db.execute(q)
@@ -163,8 +161,11 @@ async def create_mechanic(
     # Forzamos el rol a 'mechanic' independientemente de lo que envíe el cliente
     data.role_name = "mechanic"
 
-    # 2. Crear usuario mecánico
+    # 2. Crear usuario mecánico vinculado al dueño
     user = await crud_user.create(db, obj_in=data)
+    user.employer_id = owner.id
+    db.add(user)
+    await db.flush()
 
     # 3. Si se indicó workshop_id, verificar pertenencia y asignar
     if workshop_id is not None:

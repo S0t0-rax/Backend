@@ -50,8 +50,14 @@ class User(Base, TimestampMixin):
         BigInteger, ForeignKey("incidents.id"), nullable=True
     )
     fcm_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    employer_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     # ── Relaciones ─────────────────────────────────────────────
+    employer: Mapped[Optional["User"]] = relationship(
+        "User", remote_side=[id], backref="employees"
+    )
     roles: Mapped[List["Role"]] = relationship(
         "Role",
         secondary="user_roles",
