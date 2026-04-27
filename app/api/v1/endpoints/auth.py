@@ -104,6 +104,8 @@ async def update_me(data: UserUpdate, db: DBSession, current_user: CurrentUser):
             from app.core.exceptions import ConflictException
             raise ConflictException(f"El email '{data.email}' ya está en uso.")
         current_user.email = data.email
+    if data.fcm_token is not None:
+        current_user.fcm_token = data.fcm_token
     
     db.add(current_user)
     await db.flush()

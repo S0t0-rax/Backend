@@ -12,6 +12,7 @@ from app.api.dependencies import AdminOnly, AnyStaff, CurrentUser, DBSession
 from app.crud.incident import crud_incident
 from app.schemas.incident import IncidentCreate, IncidentResponse, IncidentUpdate, IncidentGlobalResponse, IncidentClientResponse
 from app.services.ai_service import ai_service
+from app.services.notification_service import notification_service
 
 router = APIRouter(prefix="/incidents", tags=["🚨 Incidentes"])
 
@@ -196,6 +197,17 @@ async def update_incident(
                     )
                 )
 
+            # --- Notificación Push: Reparación Finalizada ---
+            from app.models.user import User as UserModel
+            client_stmt = select(UserModel).where(UserModel.id == incident.client_id)
+            client_res = await db.execute(client_stmt)
+            client = client_res.scalar_one_or_none()
+            if client and client.fcm_token:
+                await notification_service.notify_status_change(
+                    user_token=client.fcm_token,
+                    status_type="service_finished"
+                )
+
         # Procesar asignación de mecánicos y taller
         if data.mechanic_ids or data.workshop_id:
             from app.models.user import User
@@ -244,6 +256,17 @@ async def update_incident(
                 )
                 db.add(new_so)
             
+            # --- Notificación Push: Solicitud Aceptada ---
+            # Buscamos al cliente para obtener su token FCM
+            client_stmt = select(User).where(User.id == incident.client_id)
+            client_res = await db.execute(client_stmt)
+            client = client_res.scalar_one_or_none()
+            if client and client.fcm_token:
+                await notification_service.notify_status_change(
+                    user_token=client.fcm_token,
+                    status_type="request_accepted"
+                )
+
             await db.flush()
 
         await db.commit()

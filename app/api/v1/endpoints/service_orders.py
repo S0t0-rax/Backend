@@ -3,7 +3,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import select, update
 from app.api.dependencies import CurrentUser, DBSession
 from app.models.service_order import ServiceOrder
+from app.models.user import User
+from app.models.incident import Incident
 from app.schemas.service_order import ServiceOrderResponse, ServiceOrderUpdate
+from app.services.notification_service import notification_service
 from datetime import datetime
 
 router = APIRouter(prefix="/service-orders", tags=["🛠️ Órdenes de Servicio"])
@@ -45,6 +48,30 @@ async def update_service_order(
         # Si sale del taller, marcamos scheduled_at si no está marcado
         if data.arrival_status == "on_the_way" and not order.scheduled_at:
             order.scheduled_at = datetime.now()
+            
+        # --- Notificación Push: Cambio de estado de llegada ---
+        # Buscamos al cliente a través del incidente relacionado
+        stmt_incident = select(Incident).where(Incident.id == order.incident_id)
+        res_incident = await db.execute(stmt_incident)
+        incident = res_incident.scalar_one_or_none()
+        
+        if incident:
+            stmt_client = select(User).where(User.id == incident.client_id)
+            res_client = await db.execute(stmt_client)
+            client = res_client.scalar_one_or_none()
+            
+            if client and client.fcm_token:
+                if data.arrival_status == "on_the_way":
+                    await notification_service.notify_status_change(
+                        user_token=client.fcm_token,
+                        status_type="mechanic_on_the_way",
+                        details={"eta": "15-20"} # Valor por defecto, se podría calcular
+                    )
+                elif data.arrival_status == "arrived":
+                    await notification_service.notify_status_change(
+                        user_token=client.fcm_token,
+                        status_type="mechanic_arrived"
+                    )
             
     if data.final_cost is not None:
         order.final_cost = data.final_cost

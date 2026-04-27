@@ -24,6 +24,12 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
+    fcm_token: Optional[str] = None
+
+
+class UserFCMUpdate(BaseModel):
+    """Actualiza el token de notificaciones push."""
+    fcm_token: str = Field(..., description="Token FCM del dispositivo")
 
 
 class UserResponse(BaseModel):
@@ -34,6 +40,7 @@ class UserResponse(BaseModel):
     is_active: bool
     status: str = "available"
     current_incident_id: Optional[int] = None
+    fcm_token: Optional[str] = None
     roles: List[str] = []
 
     model_config = ConfigDict(from_attributes=True)
@@ -48,6 +55,7 @@ class UserResponse(BaseModel):
             is_active=user.is_active,
             status=getattr(user, 'status', 'available'),
             current_incident_id=getattr(user, 'current_incident_id', None),
+            fcm_token=getattr(user, 'fcm_token', None),
             roles=[r.name for r in user.roles],
         )
 

@@ -45,3 +45,6 @@ loguru>=0.7.2
 # --- Utils ---
 email-validator>=2.1.1
 python-slugify>=8.0.4
+
+# --- Push Notifications ---
+firebase-admin>=6.5.0

@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     FIRST_ADMIN_EMAIL: str = "admin@aaa-serv-meca.com"
     FIRST_ADMIN_PASSWORD: str = "Admin@1234!"
 
+    # ── Firebase (Push Notifications) ──────────────────────────
+    # JSON content or path to firebase-service-account.json
+    FIREBASE_SERVICE_ACCOUNT_JSON: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

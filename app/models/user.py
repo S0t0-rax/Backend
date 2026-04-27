@@ -49,6 +49,7 @@ class User(Base, TimestampMixin):
     current_incident_id: Mapped[Optional[int]] = mapped_column(
         BigInteger, ForeignKey("incidents.id"), nullable=True
     )
+    fcm_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # ── Relaciones ─────────────────────────────────────────────
     roles: Mapped[List["Role"]] = relationship(
