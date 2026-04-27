@@ -24,8 +24,22 @@ async def list_workshops(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, le=200),
 ):
-    """Lista todos los talleres (público)."""
+    """Lista todos los talleres disponibles (público)."""
     return await crud_workshop.get_multi(db, skip=skip, limit=limit, only_available=True)
+
+
+@router.get("/my-workshops", response_model=List[WorkshopResponse])
+async def list_my_workshops(
+    db: DBSession,
+    current_user: WorkshopOwnerOrAdmin,
+):
+    """Lista todos los talleres del dueño autenticado (incluyendo inactivos)."""
+    from sqlalchemy import select
+    from app.models.workshop import Workshop
+    
+    stmt = select(Workshop).where(Workshop.owner_id == current_user.id)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 @router.get("/nearby", response_model=List[NearbyWorkshopResponse])
