@@ -25,7 +25,7 @@ async def list_workshops(
     limit: int = Query(50, le=200),
 ):
     """Lista todos los talleres (público)."""
-    return await crud_workshop.get_multi(db, skip=skip, limit=limit)
+    return await crud_workshop.get_multi(db, skip=skip, limit=limit, only_available=True)
 
 
 @router.get("/nearby", response_model=List[NearbyWorkshopResponse])

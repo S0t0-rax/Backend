@@ -54,8 +54,20 @@ class CRUDWorkshop(CRUDBase[Workshop, WorkshopCreate, WorkshopUpdate]):
 
         return await super().update(db, db_obj=db_obj, obj_in=update_data)
 
-    async def find_nearby(
+    async def get_multi(
+        self, db: AsyncSession, *, skip: int = 0, limit: int = 100, only_available: bool = True
+    ) -> List[Workshop]:
+        """
+        Lista talleres. Por defecto solo los disponibles para el público.
+        """
+        stmt = select(Workshop).offset(skip).limit(limit)
+        if only_available:
+            stmt = stmt.where(Workshop.is_available.is_(True))
+        
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
+    async def find_nearby(
         self,
         db: AsyncSession,
         latitude: float,
@@ -65,7 +77,6 @@ class CRUDWorkshop(CRUDBase[Workshop, WorkshopCreate, WorkshopUpdate]):
     ) -> List[tuple[Workshop, float]]:
         """
         Retorna talleres dentro del radio, ordenados por distancia.
-        Usa el índice GIST: idx_workshops_geom para máxima performance.
         """
         point = f"SRID=4326;POINT({longitude} {latitude})"
         geog_point = ST_GeogFromText(point)
@@ -77,7 +88,7 @@ class CRUDWorkshop(CRUDBase[Workshop, WorkshopCreate, WorkshopUpdate]):
             )
             .where(
                 ST_DWithin(Workshop.geom, geog_point, radius_meters),
-                Workshop.is_available == True
+                Workshop.is_available.is_(True)
             )
             .order_by("distance_meters")
             .limit(limit)
