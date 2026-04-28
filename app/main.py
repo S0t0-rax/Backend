@@ -206,13 +206,13 @@ app = FastAPI(
 ## SaaS de Gestión de Servicios Mecánicos con Geolocalización
 
 ### Módulos
-- 🔐 **Auth / Usuarios** — JWT + RBAC (admin, workshop_owner, mechanic, client)
-- 🗺️ **Geolocalización** — PostGIS + GeoAlchemy2 (tracking en tiempo real)
-- 🚗 **Vehículos (Cars)** — Registro y gestión de vehículos
-- 🚨 **Incidentes** — Reporte con foto + análisis de IA
-- 🔧 **Órdenes de Servicio** — Asignación y tracking de mecánicos
-- 💳 **Pagos QR** — Integración con pasarela QR interoperable (Bolivia)
-- 🧾 **Facturación** — CUF/CUFD según normativa SIN Bolivia
+-  **Auth / Usuarios** — JWT + RBAC (admin, workshop_owner, mechanic, client)
+-  **Geolocalización** — PostGIS + GeoAlchemy2 (tracking en tiempo real)
+-  **Vehículos (Cars)** — Registro y gestión de vehículos
+-  **Incidentes** — Reporte con foto + análisis de IA
+-  **Órdenes de Servicio** — Asignación y tracking de mecánicos
+-  **Pagos QR** — Integración con pasarela QR interoperable (Bolivia)
+-  **Facturación** — CUF/CUFD según normativa SIN Bolivia
     """,
     openapi_url="/openapi.json",
     docs_url="/docs",
