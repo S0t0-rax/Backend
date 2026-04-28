@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from loguru import logger
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -220,6 +221,9 @@ app = FastAPI(
     lifespan=lifespan,
     debug=settings.DEBUG,
 )
+
+# ── Proxy Headers (Railway HTTPS fix) ────────────────────────────
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # ── CORS ─────────────────────────────────────────────────────────
 app.add_middleware(
