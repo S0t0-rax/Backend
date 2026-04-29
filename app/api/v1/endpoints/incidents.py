@@ -146,11 +146,17 @@ async def update_incident(
         if data.status == "in_progress":
             from app.models.service_order import ServiceOrder
             from datetime import datetime
-            await db.execute(
-                update(ServiceOrder)
-                .where(ServiceOrder.incident_id == incident_id)
-                .values(started_at=datetime.now())
-            )
+            stmt_so = select(ServiceOrder).where(ServiceOrder.incident_id == incident_id)
+            res_so = await db.execute(stmt_so)
+            so = res_so.scalar_one_or_none()
+            if so:
+                now = datetime.now()
+                # Si inicia el trabajo, asegurar que tenga salida y llegada
+                if not so.scheduled_at:
+                    so.scheduled_at = now
+                if not so.started_at:
+                    so.started_at = now
+                db.add(so)
 
         # Lógica especial si el estado cambia a resuelto (finalizado)
         if data.status == "resolved":

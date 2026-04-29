@@ -44,10 +44,16 @@ async def update_service_order(
         # Si llega al lugar, marcamos started_at si no está marcado
         if data.arrival_status == "arrived" and not order.started_at:
             order.started_at = datetime.now()
+            # Si no marcó salida, la marcamos igual o antes
+            if not order.scheduled_at:
+                order.scheduled_at = order.started_at
             
         # Si sale del taller, marcamos scheduled_at si no está marcado
         if data.arrival_status == "on_the_way" and not order.scheduled_at:
-            order.scheduled_at = datetime.now()
+            if order.started_at:
+                order.scheduled_at = order.started_at
+            else:
+                order.scheduled_at = datetime.now()
             
         # --- Notificación Push: Cambio de estado de llegada ---
         # Buscamos al cliente a través del incidente relacionado
