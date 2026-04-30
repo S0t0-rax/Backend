@@ -222,10 +222,16 @@ async def update_incident(
 
             # 1. Validar límite de 3 tareas por mecánico
             if data.mechanic_ids:
+                from app.models.incident import Incident as IncidentModel
                 for mech_id in data.mechanic_ids:
-                    task_count_stmt = select(func.count(ServiceOrder.id)).where(
-                        ServiceOrder.mechanic_id == mech_id,
-                        ServiceOrder.finished_at.is_(None)
+                    task_count_stmt = (
+                        select(func.count(ServiceOrder.id))
+                        .join(IncidentModel, ServiceOrder.incident_id == IncidentModel.id)
+                        .where(
+                            ServiceOrder.mechanic_id == mech_id,
+                            ServiceOrder.finished_at.is_(None),
+                            IncidentModel.status.in_(["assigned", "in_progress"])
+                        )
                     )
                     res_count = await db.execute(task_count_stmt)
                     count = res_count.scalar_one()
