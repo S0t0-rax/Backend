@@ -110,7 +110,7 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         from app.models.service_order import ServiceOrder
         from app.models.workshop import Workshop
         
-        query = select(Incident).outerjoin(ServiceOrder, Incident.id == ServiceOrder.incident_id)
+        query = select(Incident).options(selectinload(Incident.photos)).outerjoin(ServiceOrder, Incident.id == ServiceOrder.incident_id)
         
         if status:
             query = query.where(Incident.status == status)
@@ -160,7 +160,17 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
                 reported_at=inc.reported_at,
                 latitude=inc.latitude, # Accedemos aquí que estamos en el contexto asíncrono
                 longitude=inc.longitude,
-                photos=[]
+                photos=[
+                    {
+                        "id": p.id,
+                        "storage_url": p.storage_url,
+                        "ai_detected_issue": p.ai_detected_issue,
+                        "ai_confidence_score": p.ai_confidence_score,
+                        "ai_metadata": p.ai_metadata,
+                        "created_at": p.created_at
+                    }
+                    for p in inc.photos
+                ] if getattr(inc, 'photos', None) else []
             )
             for inc in db_incidents
         ]
