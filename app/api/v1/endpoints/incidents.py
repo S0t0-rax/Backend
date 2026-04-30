@@ -91,7 +91,7 @@ async def list_global_incidents(
 @router.get("/nearby", response_model=List[IncidentResponse])
 async def nearby_incidents(
     db: DBSession,
-    _: AnyStaff,
+    current_user: CurrentUser,
     latitude: float = Query(..., ge=-90, le=90),
     longitude: float = Query(..., ge=-180, le=180),
     radius_meters: float = Query(5000, ge=0, le=50000),
@@ -100,9 +100,9 @@ async def nearby_incidents(
     """
     Busca incidentes abiertos en el radio dado.
     Usa el índice GIST de PostGIS: idx_incidents_location para performance.
-    Solo accesible por staff (admin, workshop_owner, mechanic).
+    Filtra si el incidente tiene un taller de preferencia.
     """
-    return await crud_incident.find_nearby(db, latitude, longitude, radius_meters, status=status)
+    return await crud_incident.find_nearby(db, latitude, longitude, radius_meters, status=status, owner_id=current_user.id)
 
 
 @router.get("/{incident_id}", response_model=IncidentResponse)
@@ -117,15 +117,24 @@ async def get_incident(incident_id: int, current_user: CurrentUser, db: DBSessio
 
 @router.patch("/{incident_id}", response_model=IncidentResponse)
 async def update_incident(
-    incident_id: int, data: IncidentUpdate, _: AnyStaff, db: DBSession
+    incident_id: int, data: IncidentUpdate, current_user: CurrentUser, db: DBSession
 ):
-    """Actualiza estado/diagnóstico del incidente. Solo staff."""
-    from app.core.exceptions import NotFoundException
+    """Actualiza estado/diagnóstico del incidente. Staff o cliente si está abierto."""
+    from app.core.exceptions import NotFoundException, ForbiddenException
     from app.models.status_history import StatusHistory
 
     incident = await crud_incident.get_with_photos(db, incident_id)
     if not incident:
         raise NotFoundException("Incidente")
+
+    roles = {r.name for r in current_user.roles}
+    is_staff = bool(roles.intersection({"admin", "workshop_owner", "mechanic"}))
+    
+    if not is_staff and incident.client_id != current_user.id:
+        raise ForbiddenException("No tienes permiso para actualizar este incidente.")
+        
+    if not is_staff and incident.status != "open":
+        raise ForbiddenException("No puedes modificar un incidente que ya está en curso.")
 
     try:
         old_status = incident.status
@@ -214,14 +223,15 @@ async def update_incident(
                     status_type="service_finished"
                 )
 
+        update_data = data.model_dump(exclude_unset=True)
         # Procesar asignación de mecánicos y taller
-        if data.mechanic_ids or data.workshop_id:
+        if "mechanic_ids" in update_data or "workshop_id" in update_data:
             from app.models.user import User
             from app.models.service_order import ServiceOrder
             from app.core.exceptions import BadRequestException
 
             # 1. Validar límite de 3 tareas por mecánico
-            if data.mechanic_ids:
+            if "mechanic_ids" in update_data and data.mechanic_ids:
                 from app.models.incident import Incident as IncidentModel
                 for mech_id in data.mechanic_ids:
                     task_count_stmt = (
@@ -254,19 +264,24 @@ async def update_incident(
             service_order = res.scalar_one_or_none()
             
             if service_order:
-                if data.mechanic_ids:
+                if "mechanic_ids" in update_data and data.mechanic_ids:
                     service_order.mechanic_id = data.mechanic_ids[0]
-                if data.workshop_id:
-                    service_order.workshop_id = data.workshop_id
+                if "workshop_id" in update_data:
+                    wid = data.workshop_id
+                    service_order.workshop_id = None if wid == -1 else wid
             else:
                 # Crear ServiceOrder si no existe
-                new_so = ServiceOrder(
-                    incident_id=incident_id,
-                    mechanic_id=data.mechanic_ids[0] if data.mechanic_ids else None,
-                    workshop_id=data.workshop_id,
-                    arrival_status="pending"
-                )
-                db.add(new_so)
+                wid = update_data.get("workshop_id")
+                if wid == -1: wid = None
+                mech_id = data.mechanic_ids[0] if ("mechanic_ids" in update_data and data.mechanic_ids) else None
+                if mech_id or wid:
+                    new_so = ServiceOrder(
+                        incident_id=incident_id,
+                        mechanic_id=mech_id,
+                        workshop_id=wid,
+                        arrival_status="pending"
+                    )
+                    db.add(new_so)
             
             # --- Notificación Push: Solicitud Aceptada ---
             # Buscamos al cliente para obtener su token FCM

@@ -100,15 +100,35 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         latitude: float,
         longitude: float,
         radius_meters: float = 5000,
-        status: Optional[str] = "open"
+        status: Optional[str] = "open",
+        owner_id: Optional[int] = None
     ) -> List[Incident]:
         """
         Busca incidentes. Si el radio es > 0, filtra por cercanía.
+        Filtra para que solo el taller preferido (o todos si no hay preferencia) pueda verlo.
         """
-        query = select(Incident)
+        from app.models.service_order import ServiceOrder
+        from app.models.workshop import Workshop
+        
+        query = select(Incident).outerjoin(ServiceOrder, Incident.id == ServiceOrder.incident_id)
+        
         if status:
             query = query.where(Incident.status == status)
         
+        # Filtrado de taller preferencial
+        if owner_id:
+            query = query.outerjoin(Workshop, ServiceOrder.workshop_id == Workshop.id)
+            # Un incidente es visible si:
+            # 1. No tiene ServiceOrder (es para "Cualquiera")
+            # 2. Tiene ServiceOrder y el taller pertenece al owner_id actual
+            from sqlalchemy import or_
+            query = query.where(
+                or_(
+                    ServiceOrder.id.is_(None),
+                    Workshop.owner_id == owner_id
+                )
+            )
+
         # Si el radio es mayor a 0, aplicamos el filtro de PostGIS
         if radius_meters > 0:
             point = f"SRID=4326;POINT({longitude} {latitude})"
