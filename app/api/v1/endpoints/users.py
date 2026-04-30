@@ -207,17 +207,21 @@ async def create_mechanic(
 async def delete_user_logical(
     user_id: int,
     db: DBSession,
-    admin_user: AdminOnly,
+    current_user: WorkshopOwnerOrAdmin,
 ):
     """
-    Borrado lógico de usuario (suspensión).
+    Borrado lógico de usuario (suspensión o eliminación de mecánico).
     """
     user = await crud_user.get(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
     
-    if user.id == admin_user.id:
+    if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="No puedes eliminarte a ti mismo.")
+
+    roles = {r.name for r in current_user.roles}
+    if "admin" not in roles and user.employer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No tienes permisos para eliminar a este usuario.")
 
     user.is_active = False
     db.add(user)

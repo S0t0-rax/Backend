@@ -125,6 +125,7 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             query = query.where(
                 or_(
                     ServiceOrder.id.is_(None),
+                    ServiceOrder.workshop_id.is_(None),
                     Workshop.owner_id == owner_id
                 )
             )
