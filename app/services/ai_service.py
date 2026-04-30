@@ -54,8 +54,15 @@ class AIVisionService:
             URL pública del objeto en S3
         """
         if not settings.AWS_ACCESS_KEY_ID:
-            logger.warning("AWS_ACCESS_KEY_ID no configurado — retornando mock URL")
-            return f"https://mock-s3-bucket.s3.amazonaws.com/incidents/{filename}"
+            logger.warning("AWS_ACCESS_KEY_ID no configurado — guardando imagen localmente")
+            import os
+            os.makedirs("uploads/incidents", exist_ok=True)
+            safe_filename = filename.replace("/", "_")
+            local_path = f"uploads/incidents/{safe_filename}"
+            with open(local_path, "wb") as f:
+                f.write(image_bytes)
+            # URL pública usando el dominio de Railway actual para pruebas
+            return f"https://backend-production-a940.up.railway.app/uploads/incidents/{safe_filename}"
 
         try:
             self.s3.put_object(

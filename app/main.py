@@ -257,6 +257,12 @@ register_exception_handlers(app)
 # ── Routers ───────────────────────────────────────────────────────
 app.include_router(api_router)
 
+# ── Static Files (Uploads) ────────────────────────────────────────
+import os
+from fastapi.staticfiles import StaticFiles
+os.makedirs("uploads/incidents", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 
 @app.get("/", include_in_schema=False)
 async def root():
