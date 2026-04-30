@@ -48,36 +48,54 @@ class AIVisionService:
         self, image_bytes: bytes, filename: str, content_type: str = "image/jpeg"
     ) -> str:
         """
-        Sube imagen a S3 y retorna la URL pública.
-
-        Returns:
-            URL pública del objeto en S3
+        Sube imagen a Supabase (preferido), S3, o local.
         """
-        if not settings.AWS_ACCESS_KEY_ID:
-            logger.warning("AWS_ACCESS_KEY_ID no configurado — guardando imagen localmente")
-            import os
-            os.makedirs("uploads/incidents", exist_ok=True)
-            safe_filename = filename.replace("/", "_")
-            local_path = f"uploads/incidents/{safe_filename}"
-            with open(local_path, "wb") as f:
-                f.write(image_bytes)
-            # URL pública usando el dominio de Railway actual para pruebas
-            return f"https://backend-production-a940.up.railway.app/uploads/incidents/{safe_filename}"
+        safe_filename = filename.replace("/", "_")
 
-        try:
-            self.s3.put_object(
-                Bucket=settings.AWS_S3_BUCKET,
-                Key=f"incidents/{filename}",
-                Body=image_bytes,
-                ContentType=content_type,
-            )
-            url = f"https://{settings.AWS_S3_BUCKET}.s3.{settings.AWS_REGION}.amazonaws.com/incidents/{filename}"
-            logger.info(f"Imagen subida a S3: {url}")
-            return url
-        except Exception as e:
-            logger.error(f"Error subiendo imagen a S3: {e}")
-            logger.warning("Retornando URL falsa para no bloquear el reporte de incidente.")
-            return f"https://mock-s3-bucket.s3.amazonaws.com/incidents/{filename}-fallback"
+        # 1. Intentar con Supabase
+        if settings.SUPABASE_URL and settings.SUPABASE_KEY:
+            try:
+                url = f"{settings.SUPABASE_URL}/storage/v1/object/{settings.SUPABASE_BUCKET}/{safe_filename}"
+                headers = {
+                    "Authorization": f"Bearer {settings.SUPABASE_KEY}",
+                    "Content-Type": content_type
+                }
+                
+                response = await self._http_client.post(url, content=image_bytes, headers=headers)
+                
+                if response.status_code in [200, 201]:
+                    public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/{settings.SUPABASE_BUCKET}/{safe_filename}"
+                    logger.info(f"Imagen subida a Supabase: {public_url}")
+                    return public_url
+                else:
+                    logger.error(f"Error HTTP subiendo a Supabase: {response.text}")
+            except Exception as e:
+                logger.error(f"Excepción subiendo a Supabase: {e}")
+
+        # 2. Intentar con AWS S3 si Supabase falla o no está configurado
+        if settings.AWS_ACCESS_KEY_ID:
+            try:
+                self.s3.put_object(
+                    Bucket=settings.AWS_S3_BUCKET,
+                    Key=f"incidents/{safe_filename}",
+                    Body=image_bytes,
+                    ContentType=content_type,
+                )
+                s3_url = f"https://{settings.AWS_S3_BUCKET}.s3.{settings.AWS_REGION}.amazonaws.com/incidents/{safe_filename}"
+                logger.info(f"Imagen subida a S3: {s3_url}")
+                return s3_url
+            except Exception as e:
+                logger.error(f"Error subiendo imagen a S3: {e}")
+
+        # 3. Fallback a almacenamiento local temporal en Railway
+        logger.warning("Ni Supabase ni AWS configurados/funcionando — guardando imagen localmente")
+        import os
+        os.makedirs("uploads/incidents", exist_ok=True)
+        local_path = f"uploads/incidents/{safe_filename}"
+        with open(local_path, "wb") as f:
+            f.write(image_bytes)
+        # URL pública usando el dominio de Railway actual para pruebas
+        return f"https://backend-production-a940.up.railway.app/uploads/incidents/{safe_filename}"
 
     async def analyze_vehicle_damage(
         self, image_url: str

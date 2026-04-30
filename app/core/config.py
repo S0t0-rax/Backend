@@ -49,11 +49,15 @@ class Settings(BaseSettings):
     # ── Rate Limiting ──────────────────────────────────────────
     RATE_LIMIT_PER_MINUTE: int = 60
 
-    # ── AWS S3 (almacenamiento de imágenes) ───────────────────
+    # ── AWS S3 / Supabase Storage (almacenamiento de imágenes) ───────────────────
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_S3_BUCKET: str = "aaa-serv-meca-images"
     AWS_REGION: str = "us-east-1"
+    
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
+    SUPABASE_BUCKET: str = "incidents"
 
     # ── IA / Vision API ────────────────────────────────────────
     AI_VISION_API_URL: str = ""
