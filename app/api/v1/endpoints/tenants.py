@@ -7,7 +7,7 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.role import Role
 from app.schemas.tenant import TenantResponse, TenantRegistrationRequest
-from app.core.security import get_password_hash
+from app.core.security import hash_password
 from app.api.deps import get_current_user
 
 router = APIRouter()
@@ -47,7 +47,7 @@ async def register_tenant(
     # 3. Crear el usuario Administrador
     new_admin = User(
         email=data.admin_email,
-        password_hash=get_password_hash(data.admin_password),
+        password_hash=hash_password(data.admin_password),
         full_name=data.admin_full_name,
         tenant_id=new_tenant.id,
         roles=[role_owner]
