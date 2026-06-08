@@ -95,7 +95,7 @@ class AIVisionService:
         with open(local_path, "wb") as f:
             f.write(image_bytes)
         # URL pública usando el dominio de Railway actual para pruebas
-        return f"https://backend-production-a940.up.railway.app/uploads/incidents/{safe_filename}"
+        return f"https://web-production-599cc.up.railway.app/uploads/incidents/{safe_filename}"
 
     async def analyze_vehicle_damage(
         self, image_url: str
