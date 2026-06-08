@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from app.models.workshop import Workshop
     from app.models.car import Car
     from app.models.incident import Incident
-
+    from app.models.tenant import Tenant
 
 class User(Base, TimestampMixin):
     """
@@ -53,8 +53,12 @@ class User(Base, TimestampMixin):
     employer_id: Mapped[Optional[int]] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    tenant_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("tenants.id", ondelete="SET NULL"), nullable=True
+    )
 
     # ── Relaciones ─────────────────────────────────────────────
+    tenant: Mapped[Optional["Tenant"]] = relationship("Tenant", back_populates="users")
     employer: Mapped[Optional["User"]] = relationship(
         "User", remote_side=[id], backref="employees"
     )

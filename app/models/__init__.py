@@ -5,6 +5,7 @@ al hacer `from app.models import *` en alembic/env.py
 """
 from app.models.base import Base, TimestampMixin
 from app.models.role import Role, user_roles_table
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.workshop import Workshop, workshop_staff_table
 from app.models.car import Car
@@ -18,6 +19,7 @@ from app.models.audit_log import AuditLog
 __all__ = [
     "Base", "TimestampMixin",
     "Role", "user_roles_table",
+    "Tenant",
     "User",
     "Workshop", "workshop_staff_table",
     "Car",

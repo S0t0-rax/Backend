@@ -39,6 +39,7 @@ class IncidentPhotoResponse(BaseModel):
 class IncidentResponse(BaseModel):
     id: int
     client_id: Optional[int]
+    tenant_id: Optional[int] = None
     car_id: Optional[int]
     address_reference: Optional[str]
     description: Optional[str]

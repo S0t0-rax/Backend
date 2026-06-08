@@ -14,6 +14,7 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.user import User
     from app.models.service_order import ServiceOrder
+    from app.models.tenant import Tenant
 
 
 # ── Tabla de asociación workshops ↔ mechanics ─────────────────
@@ -54,6 +55,11 @@ class Workshop(Base):
     is_available: Mapped[bool] = mapped_column(default=True)
 
     # ── Relaciones ─────────────────────────────────────────────
+    tenant_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True
+    )
+    tenant: Mapped[Optional["Tenant"]] = relationship("Tenant", back_populates="workshops")
+    
     owner: Mapped[Optional["User"]] = relationship(
         "User", back_populates="owned_workshops", foreign_keys=[owner_id]
     )

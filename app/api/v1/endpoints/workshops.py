@@ -37,7 +37,9 @@ async def list_my_workshops(
     from sqlalchemy import select
     from app.models.workshop import Workshop
     
-    stmt = select(Workshop).where(Workshop.owner_id == current_user.id)
+    stmt = select(Workshop).where(
+        (Workshop.tenant_id == current_user.tenant_id) | (Workshop.owner_id == current_user.id)
+    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -71,7 +73,7 @@ async def create_workshop(
     data: WorkshopCreate, current_user: WorkshopOwnerOrAdmin, db: DBSession
 ):
     """Registra un nuevo taller. Solo owners y admins."""
-    return await crud_workshop.create(db, obj_in=data, owner_id=current_user.id)
+    return await crud_workshop.create(db, obj_in=data, owner_id=current_user.id, tenant_id=current_user.tenant_id)
 
 
 @router.get("/{workshop_id}", response_model=WorkshopResponse)

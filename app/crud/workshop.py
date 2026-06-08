@@ -15,11 +15,12 @@ from app.schemas.workshop import WorkshopCreate, WorkshopUpdate
 class CRUDWorkshop(CRUDBase[Workshop, WorkshopCreate, WorkshopUpdate]):
 
     async def create(
-        self, db: AsyncSession, *, obj_in: WorkshopCreate, owner_id: int
+        self, db: AsyncSession, *, obj_in: WorkshopCreate, owner_id: int, tenant_id: int | None = None
     ) -> Workshop:
         point_wkt = f"SRID=4326;POINT({obj_in.longitude} {obj_in.latitude})"
         workshop = Workshop(
             owner_id=owner_id,
+            tenant_id=tenant_id,
             name=obj_in.name,
             tax_id=obj_in.tax_id,
             address_text=obj_in.address_text,

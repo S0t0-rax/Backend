@@ -42,6 +42,7 @@ class UserResponse(BaseModel):
     status: str = "available"
     current_incident_id: Optional[int] = None
     fcm_token: Optional[str] = None
+    tenant_id: Optional[int] = None
     roles: List[str] = []
 
     model_config = ConfigDict(from_attributes=True)
@@ -57,6 +58,7 @@ class UserResponse(BaseModel):
             status=getattr(user, 'status', 'available'),
             current_incident_id=getattr(user, 'current_incident_id', None),
             fcm_token=getattr(user, 'fcm_token', None),
+            tenant_id=getattr(user, 'tenant_id', None),
             roles=[r.name for r in user.roles],
         )
 
@@ -86,3 +88,6 @@ class AdminUserUpdate(BaseModel):
     role_name: Optional[str] = None
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    fcm_token: Optional[str] = None
+    employer_id: Optional[int] = None
+    tenant_id: Optional[int] = None

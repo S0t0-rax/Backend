@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from app.models.car import Car
     from app.models.service_order import ServiceOrder
     from app.models.status_history import StatusHistory
+    from app.models.tenant import Tenant
 
 
 class Incident(Base):
@@ -60,6 +61,11 @@ class Incident(Base):
     review_comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # ── Relaciones ─────────────────────────────────────────────
+    tenant_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True
+    )
+    tenant: Mapped[Optional["Tenant"]] = relationship("Tenant", back_populates="incidents")
+    
     client: Mapped[Optional["User"]] = relationship(
         "User", back_populates="incidents", foreign_keys=[client_id]
     )

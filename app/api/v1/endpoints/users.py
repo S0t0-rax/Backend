@@ -96,7 +96,9 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
             workshop_staff_table.c.workshop_id.label('assigned_workshop_id'),
         )
         .outerjoin(workshop_staff_table, workshop_staff_table.c.mechanic_id == User.id)
-        .where(User.employer_id == owner.id)
+        .where(
+            (User.tenant_id == owner.tenant_id) | (User.employer_id == owner.id)
+        )
     )
 
     rows = await db.execute(q)
@@ -200,9 +202,10 @@ async def create_mechanic(
     # Forzamos el rol a 'mechanic' independientemente de lo que envíe el cliente
     data.role_name = "mechanic"
 
-    # 2. Crear usuario mecánico vinculado al dueño
+    # 2. Crear usuario mecánico vinculado al dueño y su tenant
     user = await crud_user.create(db, obj_in=data)
     user.employer_id = owner.id
+    user.tenant_id = owner.tenant_id
     db.add(user)
     await db.flush()
 

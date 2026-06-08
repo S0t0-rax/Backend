@@ -13,6 +13,7 @@ class WorkshopCreate(BaseModel):
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
     is_available: bool = True
+    tenant_id: Optional[int] = None
 
 
 class WorkshopUpdate(BaseModel):
@@ -27,6 +28,7 @@ class WorkshopUpdate(BaseModel):
 class WorkshopResponse(BaseModel):
     id: int
     owner_id: Optional[int]
+    tenant_id: Optional[int]
     name: str
     tax_id: Optional[str]
     address_text: str
