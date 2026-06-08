@@ -131,7 +131,7 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
                 IncidentModel.id, 
                 IncidentModel.rating, 
                 IncidentModel.review_comment, 
-                IncidentModel.finished_at, 
+                ServiceOrder.finished_at, 
                 User.full_name.label("client_name")
             )
             .join(ServiceOrder, ServiceOrder.incident_id == IncidentModel.id)
@@ -141,7 +141,7 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
                 IncidentModel.status == "resolved",
                 IncidentModel.rating.isnot(None)
             )
-            .order_by(IncidentModel.finished_at.desc())
+            .order_by(ServiceOrder.finished_at.desc())
         )
         reviews_res = await db.execute(reviews_stmt)
         reviews_data = reviews_res.all()
