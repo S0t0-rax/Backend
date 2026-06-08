@@ -194,6 +194,7 @@ async def lifespan(app: FastAPI):
     await run_migrations()
     # Sembrar datos y rescatar usuarios
     await seed_data()
+    logger.info("[DEBUG] Lifespan alcanzó el yield, cediendo control a Uvicorn...")
     yield
     logger.info("[STOP] Servidor detenido.")
 
