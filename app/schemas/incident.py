@@ -63,6 +63,8 @@ class IncidentClientResponse(IncidentResponse):
     service_order_id: Optional[int] = None
     workshop_name: Optional[str] = None
     mechanic_name: Optional[str] = None
+    mechanic_phone: Optional[str] = None
+    client_phone: Optional[str] = None
     arrival_status: Optional[str] = None
     scheduled_at: Optional[datetime] = None
     started_at: Optional[datetime] = None

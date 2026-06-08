@@ -264,12 +264,15 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
         from app.models.workshop import Workshop
         from sqlalchemy.orm import aliased
 
+        Client = aliased(User)
         Mechanic = aliased(User)
         
         query = (
             select(
                 Incident,
                 Mechanic.full_name.label("mechanic_name"),
+                Mechanic.phone.label("mechanic_phone"),
+                Client.phone.label("client_phone"),
                 Workshop.name.label("workshop_name"),
                 ServiceOrder.id.label("so_id"),
                 ServiceOrder.arrival_status,
@@ -280,6 +283,7 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             .outerjoin(ServiceOrder, Incident.id == ServiceOrder.incident_id)
             .outerjoin(Mechanic, ServiceOrder.mechanic_id == Mechanic.id)
             .outerjoin(Workshop, ServiceOrder.workshop_id == Workshop.id)
+            .outerjoin(Client, Incident.client_id == Client.id)
         )
         
         if client_id:
@@ -321,6 +325,8 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
                 "longitude": inc.longitude,
                 "workshop_name": w_name,
                 "mechanic_name": m_name,
+                "mechanic_phone": row.mechanic_phone,
+                "client_phone": row.client_phone,
                 "arrival_status": a_status,
                 "photos": [] 
             }
