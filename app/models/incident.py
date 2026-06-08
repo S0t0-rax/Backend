@@ -54,6 +54,10 @@ class Incident(Base):
     reported_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    
+    # ── Calificación ───────────────────────────────────────────
+    rating: Mapped[Optional[int]] = mapped_column(nullable=True, comment="Puntuación 1 a 5")
+    review_comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # ── Relaciones ─────────────────────────────────────────────
     client: Mapped[Optional["User"]] = relationship(

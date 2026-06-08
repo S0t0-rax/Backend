@@ -10,7 +10,7 @@ from sqlalchemy import select, update, func
 
 from app.api.dependencies import AdminOnly, AnyStaff, CurrentUser, DBSession
 from app.crud.incident import crud_incident
-from app.schemas.incident import IncidentCreate, IncidentResponse, IncidentUpdate, IncidentGlobalResponse, IncidentClientResponse
+from app.schemas.incident import IncidentCreate, IncidentResponse, IncidentUpdate, IncidentGlobalResponse, IncidentClientResponse, IncidentRateRequest
 from app.services.ai_service import ai_service
 from app.services.notification_service import notification_service
 
@@ -346,3 +346,39 @@ async def upload_incident_photo(
     await crud_incident.add_photo(db, incident_id, storage_url, ai_result)
 
     return await crud_incident.get_with_photos(db, incident_id)
+
+@router.patch("/{incident_id}/rate", response_model=IncidentResponse)
+async def rate_incident(
+    incident_id: int,
+    data: IncidentRateRequest,
+    current_user: CurrentUser,
+    db: DBSession,
+):
+    """Permite al cliente calificar el servicio de un incidente resuelto."""
+    from app.core.exceptions import NotFoundException, BadRequestException
+    from sqlalchemy import update
+    from app.models.incident import Incident
+
+    incident = await crud_incident.get(db, incident_id)
+    if not incident:
+        raise NotFoundException("Incidente")
+    
+    if incident.client_id != current_user.id:
+        raise BadRequestException("Solo el creador del incidente puede calificarlo.")
+    
+    if incident.status != "resolved":
+        raise BadRequestException("Solo se pueden calificar incidentes finalizados (resolved).")
+    
+    if incident.rating is not None:
+        raise BadRequestException("Este incidente ya fue calificado.")
+
+    await db.execute(
+        update(Incident)
+        .where(Incident.id == incident_id)
+        .values(
+            rating=data.rating,
+            review_comment=data.review_comment
+        )
+    )
+    
+    return await crud_incident.get(db, incident_id)

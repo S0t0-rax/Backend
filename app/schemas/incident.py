@@ -58,6 +58,11 @@ class IncidentGlobalResponse(IncidentResponse):
     workshop_name: Optional[str] = None
     client_name: Optional[str] = None
 
+class IncidentRateRequest(BaseModel):
+    """Payload para calificar un incidente resuelto."""
+    rating: int = Field(..., ge=1, le=5, description="Puntuación de 1 a 5")
+    review_comment: Optional[str] = None
+
 class IncidentClientResponse(IncidentResponse):
     """Schema para que el cliente vea quién le atiende."""
     service_order_id: Optional[int] = None
@@ -69,4 +74,6 @@ class IncidentClientResponse(IncidentResponse):
     scheduled_at: Optional[datetime] = None
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
+    rating: Optional[int] = None
+    review_comment: Optional[str] = None
 

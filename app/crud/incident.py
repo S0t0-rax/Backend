@@ -323,6 +323,8 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
                 "reported_at": inc.reported_at,
                 "latitude": inc.latitude,
                 "longitude": inc.longitude,
+                "rating": inc.rating,
+                "review_comment": inc.review_comment,
                 "workshop_name": w_name,
                 "mechanic_name": m_name,
                 "mechanic_phone": row.mechanic_phone,
