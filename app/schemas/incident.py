@@ -47,6 +47,8 @@ class IncidentResponse(BaseModel):
     reported_at: datetime
     latitude: float
     longitude: float
+    rating: Optional[int] = None
+    review_comment: Optional[str] = None
     photos: List[IncidentPhotoResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

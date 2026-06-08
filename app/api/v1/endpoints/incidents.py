@@ -381,4 +381,4 @@ async def rate_incident(
         )
     )
     
-    return await crud_incident.get(db, incident_id)
+    return await crud_incident.get_with_photos(db, incident_id)
