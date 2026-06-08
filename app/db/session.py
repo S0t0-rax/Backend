@@ -54,7 +54,11 @@ engine = create_async_engine(
     echo=settings.DEBUG,
     pool_pre_ping=True,
     # Para SQLite no hay pool real; para PostgreSQL ajusta según carga
-    **({} if "sqlite" in _db_url else {"pool_size": 10, "max_overflow": 20}),
+    **({} if "sqlite" in _db_url else {
+        "pool_size": 10,
+        "max_overflow": 20,
+        "prepared_statement_cache_size": 0,
+    }),
     future=True,
 )
 
