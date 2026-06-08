@@ -57,7 +57,7 @@ engine = create_async_engine(
     **({} if "sqlite" in _db_url else {
         "pool_size": 10,
         "max_overflow": 20,
-        "prepared_statement_cache_size": 0,
+        "connect_args": {"statement_cache_size": 0},
     }),
     future=True,
 )
