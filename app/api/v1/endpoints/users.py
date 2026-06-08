@@ -125,6 +125,42 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
             w = await crud_workshop.get(db, assigned_workshop_id)
             workshop_name = w.name if w else None
 
+        # Obtener reseñas y calificaciones
+        reviews_stmt = (
+            select(
+                IncidentModel.id, 
+                IncidentModel.rating, 
+                IncidentModel.review_comment, 
+                IncidentModel.finished_at, 
+                User.full_name.label("client_name")
+            )
+            .join(ServiceOrder, ServiceOrder.incident_id == IncidentModel.id)
+            .outerjoin(User, IncidentModel.client_id == User.id)
+            .where(
+                ServiceOrder.mechanic_id == user.id,
+                IncidentModel.status == "resolved",
+                IncidentModel.rating.isnot(None)
+            )
+            .order_by(IncidentModel.finished_at.desc())
+        )
+        reviews_res = await db.execute(reviews_stmt)
+        reviews_data = reviews_res.all()
+        
+        reviews_list = []
+        total_rating_sum = 0
+        for r in reviews_data:
+            reviews_list.append({
+                "incident_id": r.id,
+                "rating": r.rating,
+                "review_comment": r.review_comment,
+                "client_name": r.client_name or "Anónimo",
+                "date": r.finished_at
+            })
+            total_rating_sum += r.rating
+        
+        total_ratings = len(reviews_list)
+        average_rating = round(total_rating_sum / total_ratings, 2) if total_ratings > 0 else 0.0
+
         is_busy = active_tasks_count > 0
 
         results.append(
@@ -135,6 +171,9 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
                 active_incident_ids=active_incident_ids,
                 workshop_id=assigned_workshop_id,
                 workshop_name=workshop_name,
+                average_rating=average_rating,
+                total_ratings=total_ratings,
+                reviews=reviews_list,
             )
         )
 

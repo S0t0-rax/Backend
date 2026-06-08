@@ -2,6 +2,7 @@
 Schemas de Usuario — Pydantic v2.
 """
 from typing import List, Optional
+from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
@@ -59,6 +60,12 @@ class UserResponse(BaseModel):
             roles=[r.name for r in user.roles],
         )
 
+class MechanicReview(BaseModel):
+    incident_id: int
+    rating: int
+    review_comment: Optional[str] = None
+    client_name: str
+    date: Optional[datetime] = None
 
 class MechanicStaffResponse(UserResponse):
     """Respuesta para el endpoint de gestión de personal del dueño.
@@ -69,6 +76,9 @@ class MechanicStaffResponse(UserResponse):
     workshop_name: Optional[str] = None
     active_tasks_count: int = 0
     active_incident_ids: List[int] = []
+    average_rating: float = 0.0
+    total_ratings: int = 0
+    reviews: List[MechanicReview] = []
 
 class AdminUserUpdate(BaseModel):
     """Schema para edición de usuarios desde el panel Admin"""
