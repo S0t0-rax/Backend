@@ -37,9 +37,13 @@ async def list_my_workshops(
     from sqlalchemy import select
     from app.models.workshop import Workshop
     
-    stmt = select(Workshop).where(
-        (Workshop.tenant_id == current_user.tenant_id) | (Workshop.owner_id == current_user.id)
-    )
+    from sqlalchemy import or_
+
+    conditions = [Workshop.owner_id == current_user.id]
+    if current_user.tenant_id is not None:
+        conditions.append(Workshop.tenant_id == current_user.tenant_id)
+
+    stmt = select(Workshop).where(or_(*conditions))
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

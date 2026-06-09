@@ -90,15 +90,19 @@ async def my_staff(db: DBSession, owner: WorkshopOwnerOrAdmin):
     # Queremos obtener:
     # - assigned_workshop_id: el taller al que pertenece por la tabla workshop_staff (si tiene)
     # - active_tasks_count: cuántas órdenes tiene abiertas
+    from sqlalchemy import or_
+
+    conditions = [User.employer_id == owner.id]
+    if owner.tenant_id is not None:
+        conditions.append(User.tenant_id == owner.tenant_id)
+
     q = (
         select(
             User, 
             workshop_staff_table.c.workshop_id.label('assigned_workshop_id'),
         )
         .outerjoin(workshop_staff_table, workshop_staff_table.c.mechanic_id == User.id)
-        .where(
-            (User.tenant_id == owner.tenant_id) | (User.employer_id == owner.id)
-        )
+        .where(or_(*conditions))
     )
 
     rows = await db.execute(q)
