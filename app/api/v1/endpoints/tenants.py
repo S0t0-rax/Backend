@@ -8,7 +8,7 @@ from app.models.user import User
 from app.models.role import Role
 from app.schemas.tenant import TenantResponse, TenantRegistrationRequest
 from app.core.security import hash_password
-from app.api.deps import get_current_user
+from app.api.dependencies import get_current_user
 
 router = APIRouter()
 
