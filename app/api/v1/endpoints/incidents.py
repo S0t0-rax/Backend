@@ -138,6 +138,13 @@ async def update_incident(
 
     try:
         old_status = incident.status
+        
+        # Si se envían mecánicos y no se pasa status, y el status es open, forzamos a assigned
+        update_data = data.model_dump(exclude_unset=True)
+        if "mechanic_ids" in update_data and data.mechanic_ids and not data.status:
+            if incident.status == "open":
+                data.status = "assigned"
+
         updated = await crud_incident.update(db, db_obj=incident, obj_in=data)
 
         # Auditoría automática de cambio de estado
