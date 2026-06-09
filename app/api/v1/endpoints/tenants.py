@@ -6,9 +6,9 @@ from app.db.session import get_db
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.role import Role
-from app.schemas.tenant import TenantResponse, TenantRegistrationRequest
+from app.schemas.tenant import TenantResponse, TenantRegistrationRequest, TenantUpdate
 from app.core.security import hash_password
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, AdminOnly
 
 router = APIRouter()
 
@@ -74,4 +74,52 @@ async def get_my_tenant(
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant no encontrado.")
         
+    return tenant
+
+# ── Endpoints de Gestión para el SuperAdmin ───────────────────
+
+@router.get("/", response_model=list[TenantResponse])
+async def list_tenants(
+    admin: AdminOnly,
+    db: AsyncSession = Depends(get_db),
+    skip: int = 0,
+    limit: int = 50
+):
+    """Lista todas las empresas/talleres registradas en el sistema (Solo SuperAdmin)."""
+    res = await db.execute(select(Tenant).offset(skip).limit(limit))
+    return res.scalars().all()
+
+@router.get("/{tenant_id}", response_model=TenantResponse)
+async def get_tenant(
+    tenant_id: int,
+    admin: AdminOnly,
+    db: AsyncSession = Depends(get_db)
+):
+    """Obtiene los detalles de una empresa específica (Solo SuperAdmin)."""
+    res = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = res.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant no encontrado.")
+    return tenant
+
+@router.patch("/{tenant_id}", response_model=TenantResponse)
+async def update_tenant(
+    tenant_id: int,
+    data: TenantUpdate,
+    admin: AdminOnly,
+    db: AsyncSession = Depends(get_db)
+):
+    """Modifica o suspende a una empresa entera (Solo SuperAdmin)."""
+    res = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = res.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant no encontrado.")
+    
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(tenant, field, value)
+        
+    db.add(tenant)
+    await db.commit()
+    await db.refresh(tenant)
     return tenant
