@@ -15,26 +15,36 @@ class ReportService:
         
         # Limpiar y formatear el DataFrame si no está vacío
         if not df.empty:
-            if "photos" in df.columns:
-                df = df.drop(columns=["photos"])
+            # Columnas a mantener
+            columns_to_keep = [
+                "id", "status", "severity_level", "description", 
+                "workshop_name", "mechanic_name", "client_phone", "mechanic_phone",
+                "reported_at", "started_at", "finished_at", "rating", "review_comment"
+            ]
+            
+            # Filtramos solo si las columnas existen
+            df = df[[col for col in columns_to_keep if col in df.columns]]
             
             # Renombrar columnas para mayor legibilidad
             rename_map = {
                 "id": "ID",
                 "status": "Estado",
                 "severity_level": "Severidad",
-                "description": "Diagnóstico",
+                "description": "Diagnóstico / Problema",
+                "workshop_name": "Taller Asignado",
                 "mechanic_name": "Mecánico",
-                "client_name": "Cliente",
-                "workshop_name": "Taller",
-                "reported_at": "Fecha de Reporte",
-                "finished_at": "Fecha de Finalización",
-                "rating": "Calificación"
+                "client_phone": "Teléfono Cliente",
+                "mechanic_phone": "Teléfono Mecánico",
+                "reported_at": "Fecha Reporte",
+                "started_at": "Fecha Inicio (Viaje)",
+                "finished_at": "Fecha Finalización",
+                "rating": "Calificación (1-5)",
+                "review_comment": "Comentarios del Cliente"
             }
             df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
             
             # Formatear fechas
-            for col in ["Fecha de Reporte", "Fecha de Finalización"]:
+            for col in ["Fecha Reporte", "Fecha Inicio (Viaje)", "Fecha Finalización"]:
                 if col in df.columns:
                     df[col] = pd.to_datetime(df[col]).dt.tz_localize(None)
 
