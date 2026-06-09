@@ -14,6 +14,7 @@ from app.api.v1.endpoints.audit import router as audit_router
 from app.api.v1.endpoints.cars import router as cars_router
 from app.api.v1.endpoints.service_orders import router as service_orders_router
 from app.api.v1.endpoints.payments import router as payments_router
+from app.api.v1.endpoints.reports import router as reports_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -28,3 +29,4 @@ api_router.include_router(cars_router)
 api_router.include_router(service_orders_router)
 api_router.include_router(tenants_router, prefix="/tenants", tags=["Tenants"])
 api_router.include_router(location_ws_router, prefix="/ws/location", tags=["WebSockets"])
+api_router.include_router(reports_router)
