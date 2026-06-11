@@ -279,7 +279,8 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
                 ServiceOrder.arrival_status,
                 ServiceOrder.scheduled_at,
                 ServiceOrder.started_at,
-                ServiceOrder.finished_at
+                ServiceOrder.finished_at,
+                ServiceOrder.checklist
             )
             .outerjoin(ServiceOrder, Incident.id == ServiceOrder.incident_id)
             .outerjoin(Mechanic, ServiceOrder.mechanic_id == Mechanic.id)
@@ -310,6 +311,7 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             s_at = row.scheduled_at
             st_at = row.started_at
             f_at = row.finished_at
+            c_list = row.checklist
             data = {
                 "id": inc.id,
                 "service_order_id": so_id,
@@ -332,6 +334,7 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
                 "mechanic_phone": row.mechanic_phone,
                 "client_phone": row.client_phone,
                 "arrival_status": a_status,
+                "checklist": c_list,
                 "photos": [] 
             }
             results.append(data)

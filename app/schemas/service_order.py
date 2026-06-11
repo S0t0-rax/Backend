@@ -25,6 +25,7 @@ class ServiceOrderUpdate(BaseModel):
     final_cost: Optional[Decimal] = None
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
+    checklist: Optional[list] = None
 
 
 class ServiceOrderResponse(BaseModel):
@@ -39,6 +40,7 @@ class ServiceOrderResponse(BaseModel):
     estimated_cost: Optional[Decimal]
     final_cost: Optional[Decimal]
     arrival_status: Optional[str]
+    checklist: Optional[list]
 
     model_config = ConfigDict(from_attributes=True)
 

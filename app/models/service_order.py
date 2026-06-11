@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from geoalchemy2 import Geography
 from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -61,6 +62,9 @@ class ServiceOrder(Base):
         nullable=True,
         comment="Ubicación GPS del mecánico en ruta al incidente",
     )
+
+    # ── Transparencia (Checklist en Vivo) ──────────────────────
+    checklist: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
 
     # ── Relaciones ─────────────────────────────────────────────
     incident: Mapped[Optional["Incident"]] = relationship(

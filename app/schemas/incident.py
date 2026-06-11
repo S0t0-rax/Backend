@@ -23,6 +23,7 @@ class IncidentUpdate(BaseModel):
     address_reference: Optional[str] = None
     mechanic_ids: Optional[List[int]] = None
     workshop_id: Optional[int] = None
+    checklist: Optional[list] = None
 
 
 class IncidentPhotoResponse(BaseModel):
@@ -79,4 +80,5 @@ class IncidentClientResponse(IncidentResponse):
     finished_at: Optional[datetime] = None
     rating: Optional[int] = None
     review_comment: Optional[str] = None
+    checklist: Optional[list] = None
 

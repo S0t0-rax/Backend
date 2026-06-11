@@ -141,11 +141,13 @@ async def update_incident(
         
         # Si se envían mecánicos y no se pasa status, y el status es open, forzamos a assigned
         update_data = data.model_dump(exclude_unset=True)
+        checklist_data = update_data.pop("checklist", None)
+        
         if "mechanic_ids" in update_data and data.mechanic_ids and not data.status:
             if incident.status == "open":
                 data.status = "assigned"
 
-        updated = await crud_incident.update(db, db_obj=incident, obj_in=data)
+        updated = await crud_incident.update(db, db_obj=incident, obj_in=update_data)
 
         # Auditoría automática de cambio de estado
         if data.status and data.status != old_status:
@@ -230,9 +232,8 @@ async def update_incident(
                     status_type="service_finished"
                 )
 
-        update_data = data.model_dump(exclude_unset=True)
-        # Procesar asignación de mecánicos y taller
-        if "mechanic_ids" in update_data or "workshop_id" in update_data:
+        # Procesar asignación de mecánicos y taller, y checklist
+        if "mechanic_ids" in update_data or "workshop_id" in update_data or checklist_data is not None:
             from app.models.user import User
             from app.models.service_order import ServiceOrder
             from app.core.exceptions import BadRequestException
@@ -274,19 +275,22 @@ async def update_incident(
                 if "mechanic_ids" in update_data and data.mechanic_ids:
                     service_order.mechanic_id = data.mechanic_ids[0]
                 if "workshop_id" in update_data:
-                    wid = data.workshop_id
+                    wid = update_data["workshop_id"]
                     service_order.workshop_id = None if wid == -1 else wid
+                if checklist_data is not None:
+                    service_order.checklist = checklist_data
             else:
                 # Crear ServiceOrder si no existe
                 wid = update_data.get("workshop_id")
                 if wid == -1: wid = None
                 mech_id = data.mechanic_ids[0] if ("mechanic_ids" in update_data and data.mechanic_ids) else None
-                if mech_id or wid:
+                if mech_id or wid or checklist_data is not None:
                     new_so = ServiceOrder(
                         incident_id=incident_id,
                         mechanic_id=mech_id,
                         workshop_id=wid,
-                        arrival_status="pending"
+                        arrival_status="pending",
+                        checklist=checklist_data
                     )
                     db.add(new_so)
             
