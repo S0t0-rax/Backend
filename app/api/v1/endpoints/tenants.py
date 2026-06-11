@@ -86,8 +86,19 @@ async def list_tenants(
     limit: int = 50
 ):
     """Lista todas las empresas/talleres registradas en el sistema (Solo SuperAdmin)."""
-    res = await db.execute(select(Tenant).offset(skip).limit(limit))
-    return res.scalars().all()
+    from sqlalchemy.orm import selectinload
+    res = await db.execute(select(Tenant).options(selectinload(Tenant.workshops)).offset(skip).limit(limit))
+    tenants = res.scalars().all()
+    
+    # Si el Tenant no tiene NIT, intentar sacar el NIT de su primer taller
+    for t in tenants:
+        if not t.tax_id and t.workshops:
+            for w in t.workshops:
+                if w.tax_id:
+                    t.tax_id = w.tax_id
+                    break
+    
+    return tenants
 
 @router.get("/{tenant_id}", response_model=TenantResponse)
 async def get_tenant(
