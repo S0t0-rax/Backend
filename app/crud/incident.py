@@ -266,12 +266,13 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
 
         Client = aliased(User)
         Mechanic = aliased(User)
+        Owner = aliased(User)
         
         query = (
             select(
                 Incident,
                 Mechanic.full_name.label("mechanic_name"),
-                Mechanic.phone.label("mechanic_phone"),
+                func.coalesce(Mechanic.phone, Owner.phone).label("mechanic_phone"),
                 Client.phone.label("client_phone"),
                 Workshop.name.label("workshop_name"),
                 ServiceOrder.id.label("so_id"),
@@ -283,6 +284,7 @@ class CRUDIncident(CRUDBase[Incident, IncidentCreate, IncidentUpdate]):
             .outerjoin(ServiceOrder, Incident.id == ServiceOrder.incident_id)
             .outerjoin(Mechanic, ServiceOrder.mechanic_id == Mechanic.id)
             .outerjoin(Workshop, ServiceOrder.workshop_id == Workshop.id)
+            .outerjoin(Owner, Workshop.owner_id == Owner.id)
             .outerjoin(Client, Incident.client_id == Client.id)
         )
         
